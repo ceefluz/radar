@@ -4,6 +4,7 @@ library(shinycssloaders)
 library(shinyjs)
 library(shinyWidgets)
 library(shinyBS)
+library(rintrojs)
 
 dbHeader <-
   dashboardHeader(
