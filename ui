@@ -17,7 +17,7 @@ dbHeader <-
       title = "Sample Data Mode"
     ),
     class = "dropdown"),
-    
+
     tags$li(
       a(
         strong("ABOUT RadaR "),
@@ -40,14 +40,26 @@ dbHeader <-
 
 
 ui <- dashboardPage(
+
   skin = "red",
   title = "RadaR",
   
   dbHeader,
+ 
   
   dashboardSidebar(
+    introjsUI(),
     width = 300,
+    introBox(
     sidebarMenu(
+      menuItem( 
+        actionBttn(
+        inputId = "help",
+        icon = icon("question-circle"),
+        style = "bordered",
+        no_outline = TRUE,
+        label = "Click here for intro",
+        size = "sm")),
       menuItem(
         "Anaylsis",
         icon = icon("bar-chart"),
@@ -268,12 +280,13 @@ ui <- dashboardPage(
           )
         )
       )
-    )
+    ),  data.step = 1, data.intro = 'Select antibiotics and press "GO" to start the app. Then select "Descriptives" in the analysis tab to see the results.', data.position = "auto")
   ),
   dashboardBody(
     tags$head(tags$style(
       HTML(
         '
+.bttn {align: center}
         .info-box {min-height: 55px; float: center}
         .info-box-icon {height: 55px; line-height: 55px;}
         .main-header
