@@ -1,3 +1,6 @@
+
+
+
 library(sjPlot)
 library(readr)
 library(DT)
@@ -18,7 +21,10 @@ library(gganimate)
 
 server <- function(input, output, session) {
   
-  observeEvent((""), {
+  observeEvent(input$help,
+               introjs(session))
+  
+  observeEvent((""), label = "help", {
     showModal(modalDialog(
       HTML(
         '<p style="text-align: center;">&nbsp;</p>
@@ -327,7 +333,7 @@ server <- function(input, output, session) {
     }
   })
   
-
+  
   # BOX 4 ------------------------------------------------------------------
   output$box4 <- renderUI({
     if (input$tab == "Descriptive") {
@@ -653,7 +659,7 @@ server <- function(input, output, session) {
   
   set_kaplan1 <- reactive({
     f <-
-      set_multiple_reac_1() 
+      set_multiple_reac_1()
     kaplan <-
       survfit(Surv(LOS, event = status) ~ bc_check, data = f)
     ggsurvplot(
@@ -675,7 +681,7 @@ server <- function(input, output, session) {
   
   set_kaplan2 <- reactive({
     f <-
-      set_multiple_reac_1() 
+      set_multiple_reac_1()
     kaplan <-
       survfit(Surv(LOS, event = status) ~ bc_check, data = f)
     ggsurvplot(
@@ -770,9 +776,9 @@ server <- function(input, output, session) {
         position = "dodge",
         alpha = .6
       ) +
-      geom_density(alpha = .3, adjust = 2) + 
-      coord_cartesian(xlim = c(0, 20)) + 
-      scale_fill_discrete(name = "Antibiotic") + 
+      geom_density(alpha = .3, adjust = 2) +
+      coord_cartesian(xlim = c(0, 20)) +
+      scale_fill_discrete(name = "Antibiotic") +
       labs(x = "Length of stay (days)", y = "Density")
     
   })
@@ -810,7 +816,7 @@ server <- function(input, output, session) {
                position = "dodge",
                color = "black") +
       scale_x_discrete(labels = c("Female", "Male", "Female", "Male")) +
-      facet_wrap( ~ bc_check, labeller = labeller(bc_check = labels)) +
+      facet_wrap(~ bc_check, labeller = labeller(bc_check = labels)) +
       labs(x = "Gender", y = "Proportion") +
       guides(fill = FALSE)
   })
@@ -827,7 +833,7 @@ server <- function(input, output, session) {
         alpha = .6,
         pch = 21
       ) +
-      facet_wrap( ~ bc_check, labeller = labeller(bc_check = labels)) +
+      facet_wrap(~ bc_check, labeller = labeller(bc_check = labels)) +
       labs(x = "Age", y = "Count") +
       guides(fill = FALSE)
   })
@@ -967,7 +973,7 @@ server <- function(input, output, session) {
   adm_count <- reactive({
     set_overall_mul <-
       set_multiple_reac_1() %>% mutate(quarter = quarter(adm_start_date)) %>%
-      mutate(yearquarter = paste(year, quarter, sep = "-")) 
+      mutate(yearquarter = paste(year, quarter, sep = "-"))
     ggplot(set_overall_mul, aes(yearquarter, fill = bc_check)) +
       geom_bar(position = "stack", color = "black") +
       scale_fill_discrete(name = 'Blood culture', labels = c("Not taken", "Taken")) +
@@ -1096,6 +1102,7 @@ server <- function(input, output, session) {
       return(NULL)
     
     t <- bind_cols(tidy(exp(coef(logreg(
+      
     )))), tidy(logreg()))
     
     t <-
@@ -1105,7 +1112,7 @@ server <- function(input, output, session) {
         "Std.Error" = "std.error",
         "p" = "p.value"
       ) %>%
-      select(-term, -estimate, -statistic) %>% mutate_if(is.numeric, round, digits = 2) %>% filter(OR < 10)
+      select(-term,-estimate,-statistic) %>% mutate_if(is.numeric, round, digits = 2) %>% filter(OR < 10)
     
     datatable(t, options = list(dom = 't', pageLength = 100))
   }, digits = 2)
@@ -1153,6 +1160,7 @@ server <- function(input, output, session) {
       return(NULL)
     
     c <- bind_cols(tidy(exp(coef(coxreg(
+      
     )))), tidy(coxreg()))
     
     c <-
@@ -1162,7 +1170,7 @@ server <- function(input, output, session) {
         "Std.Error" = "std.error",
         "p" = "p.value"
       ) %>%
-      select(-term, -estimate, -statistic,-conf.low,-conf.high)
+      select(-term,-estimate,-statistic, -conf.low, -conf.high)
     c$HR <- format(round(as.numeric(c$HR), digits = 2), nsmall = 2)
     c$Std.Error <-
       format(round(as.numeric(c$Std.Error), digits = 2), nsmall = 2)
