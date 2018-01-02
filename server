@@ -7,310 +7,536 @@ library(dplyr)
 library(survival)
 library(survminer)
 library(ResourceSelection)
-library(Hmisc)
 library(plotly)
 library(broom)
 library(forcats)
 library(ggthemes)
-library(certedata)
+library(devtools)
 library(gganimate)
 
 
-server <- function(input, output) {
+
+server <- function(input, output, session) {
   
-  
+  observeEvent((""), {
+    showModal(modalDialog(
+      HTML(
+        '<p style="text-align: center;">&nbsp;</p>
+        <p style="text-align: center;">&nbsp;</p>
+        <p style="text-align: center;">&nbsp;</p>
+        <p style="text-align: center;">&nbsp;</p>
+        <p style="text-align: center;"><span style="font-size: 14pt;"><img style="display: block; margin-left: auto; margin-right: auto;" src="radar.png"  /></span></p>
+        <p style="text-align: center;"><span style="font-size: 20pt;"><strong>WELCOME TO RadaR</strong></span></p>
+        <p style="text-align: center;">&nbsp;</p>
+        <p style="text-align: center;"><em><span style="font-size: 14pt;">Rapid analysis of diagnostic and antimicrobial patterns in R &ndash; an interactive open source software tool</span></em></p>
+        <p style="text-align: center;"><span style="font-size: 14pt;">This tool enables intuitive, rapid and reproducible quality of care pattern analysis of infectious patients without prior software experience. It facilitates understanding and communication of important trends, performances and patient outcome. </span></p>
+        <p style="text-align: center;"><span style="font-size: 14pt;">In the following example RadaR can investigate blood culture use at a fictional hospital. Due to its open source nature this tool can be easily adapted to different objectives and settings.</span></p>
+        <p style="text-align: center;"><span style="font-size: 14pt; color: #ff0000;">IMPORTANT: This example of RadaR uses synthetic patient data. Sample data was created for the purpose of displaying a running online version of RadaR and does not represent any real patients.</span></p>
+        <p style="text-align: center;">&nbsp;</p>
+        <p style="text-align: center;"><span style="font-size: 11pt; color: #000000;">Groningen, 2017 </span></p>
+        <p style="text-align: center;"><span style="font-size: 11pt; color: #000000;">Contact: c.f.luz@umcg.nl</span></p>
+        '
+      ),
+      easyClose = TRUE,
+      size = "s",
+      footer = NULL
+      ))
+  })
   
   # BOX 1 ------------------------------------------------------------------
   output$box1 <- renderUI({
-    if(input$tab == "Descriptive") {
-      div(style = "position: relative",
-          tabBox(id = "box1", width = NULL, height = 400,
-                 tabPanel(title = "Blood cultures - LOS", withSpinner(plotOutput("set_plot", height = 300), type = 4, color = "#CC0000", size = 0.7)),
-                 tabPanel(title = "Kaplan-Meier", withSpinner(plotOutput("log_rank_mul", height = 300), type = 4, color = "#CC0000", size = 0.7)),
-                 tabPanel(title = "Development - LOS", withSpinner(imageOutput("set_animate", height = 300), type = 4, color = "#CC0000", size = 0.7)),
-                 div(style = "position:absolute;right:0.5em;bottom: 0.5em;", 
-                     conditionalPanel(
-                       "input.box1 == 'Blood cultures - LOS'",
-                       actionBttn(
-                         inputId = "fill",
-                         icon = icon("search-plus"),
-                         style = "fill",
-                         color = "danger",
-                         size = "xs"
-                       )
-                     ),
-                     conditionalPanel(
-                       "input.box1 == 'Kaplan-Meier'",
-                       actionBttn(
-                         inputId = "kaplan",
-                         icon = icon("search-plus"),
-                         style = "fill",
-                         color = "danger",
-                         size = "xs"
-                       )
-                     ),
-                     conditionalPanel(
-                       "input.box1 == 'Development - LOS'",
-                       actionBttn(
-                         inputId = "devel",
-                         icon = icon("search-plus"),
-                         style = "fill",
-                         color = "danger",
-                         size = "xs"
-                       )
-                     ))))
+    if (input$tab == "Descriptive") {
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box1",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "Blood cultures - LOS",
+            withSpinner(
+              plotOutput("set_plot", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "Kaplan-Meier",
+            withSpinner(
+              plotOutput("log_rank_mul", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "Development - LOS",
+            withSpinner(
+              imageOutput("set_animate", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          div(
+            style = "position:absolute;right:0.5em;bottom: 0.5em;",
+            conditionalPanel(
+              "input.box1 == 'Blood cultures - LOS'",
+              actionBttn(
+                inputId = "fill",
+                icon = icon("search-plus"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
+            ),
+            conditionalPanel(
+              "input.box1 == 'Kaplan-Meier'",
+              actionBttn(
+                inputId = "kaplan",
+                icon = icon("search-plus"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
+            ),
+            conditionalPanel(
+              "input.box1 == 'Development - LOS'",
+              actionBttn(
+                inputId = "devel",
+                icon = icon("search-plus"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
+            )
+          )
+        )
+      )
       
-    }    
+    }
   })
   
   observeEvent((input$fill), {
     showModal(modalDialog(
-      renderPlot({set_plot() + theme(axis.title = element_text(size = 26), text = element_text(size = 20))
-      }, height = 700), easyClose = TRUE, size = "l", footer = NULL
+      renderPlot({
+        set_plot() + theme(axis.title = element_text(size = 26),
+                           text = element_text(size = 20))
+      }, height = 700),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
     ))
   })
   
   observeEvent((input$kaplan), {
     showModal(modalDialog(
-      renderPlot({set_kaplan2()
-      }, height = 700), easyClose = TRUE, size = "l", footer = NULL
+      renderPlot({
+        set_kaplan2()
+      }, height = 700),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
     ))
   })
   
   observeEvent((input$devel), {
     showModal(modalDialog(
       renderImage({
-        outfile <- tempfile(fileext='.gif')
-        p <- ggplot(set_multiple_reac_1(),aes(x = LOS, fill = bc_check, frame = as.factor(year))) +
+        outfile <- tempfile(fileext = '.gif')
+        p <-
+          ggplot(set_multiple_reac_1(),
+                 aes(
+                   x = LOS,
+                   fill = bc_check,
+                   frame = as.factor(year)
+                 )) +
           geom_density(alpha = .3) +
-          coord_cartesian(xlim = c(0,50))+
-          scale_fill_discrete(name = "Blood culture", labels = c("Not taken", "Taken")) +
-          labs( x = "Length of stay (days)", y = "Density") +
-          theme(axis.title = element_text(size = 26), legend.title = element_text(size = 26), text = element_text(size = 20))
+          coord_cartesian(xlim = c(0, 20)) +
+          scale_fill_discrete(name = "Blood culture",
+                              labels = c("Not taken", "Taken")) +
+          labs(x = "Length of stay (days)", y = "Density") +
+          theme(
+            axis.title = element_text(size = 26),
+            legend.title = element_text(size = 26),
+            text = element_text(size = 20)
+          )
         
-        gganimate(p, ani.width=1040, ani.height=600, filename = "outfile.gif")
+        gganimate(
+          p,
+          ani.width = 1040,
+          ani.height = 600,
+          filename = "outfile.gif"
+        )
         
-        list(src = "outfile.gif",
-             contentType = 'image/gif',
-             width = 1040,
-             height =600,
-             alt = "Year:")
-      }, deleteFile = TRUE), easyClose = TRUE, size = "s", footer = NULL
+        list(
+          src = "outfile.gif",
+          contentType = 'image/gif',
+          width = 1040,
+          height = 600,
+          alt = "Year:"
+        )
+      }, deleteFile = TRUE),
+      easyClose = TRUE,
+      size = "s",
+      footer = NULL
     ))
   })
   
   
   # BOX 2 ------------------------------------------------------------------
   output$box3 <- renderUI({
-    if(input$tab == "Descriptive") {
-      div(style = "position: relative",
-          tabBox(id = "box2", width = NULL, height = 400,
-                 tabPanel(title = "Antibiotics", withSpinner(plotOutput("set_ab", height = 300), type = 4, color = "#CC0000", size = 0.7)),
-                 tabPanel(title = "Antibiotics - LOS", withSpinner(plotOutput("set_plot2", height = 300), type = 4, color = "#CC0000", size = 0.7)),
-                 tabPanel(title = "Specialty - LOS", withSpinner(plotlyOutput("set_spec", height = 300), type = 4, color = "#CC0000", size = 0.7)),
-                 tabPanel(title = "Gender", withSpinner(plotOutput("gender", height = 300), type = 4, color = "#CC0000", size = 0.7)),
-                 tabPanel(title = "Age", withSpinner(plotOutput("age", height = 300), type = 4, color = "#CC0000", size = 0.7)),
-                 div(style = "position:absolute;right:0.5em; bottom: 0.5em",
-                     conditionalPanel(
-                       "input.box2 == 'Antibiotics'",
-                       actionBttn(
-                         inputId = "set_ab",
-                         icon = icon("search-plus"),
-                         style = "fill",
-                         color = "danger",
-                         size = "xs"
-                       )
-                     ),
-                     conditionalPanel(
-                       "input.box2 == 'Antibiotics - LOS'",
-                       actionBttn(
-                         inputId = "ab_los",
-                         icon = icon("search-plus"),
-                         style = "fill",
-                         color = "danger",
-                         size = "xs"
-                       )
-                     ),
-                     conditionalPanel(
-                       "input.box2 == 'Specialty - LOS'",
-                       actionBttn(
-                         inputId = "spec_los",
-                         icon = icon("search-plus"),
-                         style = "fill",
-                         color = "danger",
-                         size = "xs"
-                       )
-                     ))))
+    if (input$tab == "Descriptive") {
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box2",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "Antibiotics",
+            withSpinner(
+              plotOutput("set_ab", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "Antibiotics - LOS",
+            withSpinner(
+              plotOutput("set_plot2", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "Specialty - LOS",
+            withSpinner(
+              plotlyOutput("set_spec", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "Gender",
+            withSpinner(
+              plotOutput("gender", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "Age",
+            withSpinner(
+              plotOutput("age", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          div(
+            style = "position:absolute;right:0.5em; bottom: 0.5em",
+            conditionalPanel(
+              "input.box2 == 'Antibiotics'",
+              actionBttn(
+                inputId = "set_ab",
+                icon = icon("search-plus"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
+            ),
+            conditionalPanel(
+              "input.box2 == 'Antibiotics - LOS'",
+              actionBttn(
+                inputId = "ab_los",
+                icon = icon("search-plus"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
+            ),
+            conditionalPanel(
+              "input.box2 == 'Specialty - LOS'",
+              actionBttn(
+                inputId = "spec_los",
+                icon = icon("search-plus"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
+            )
+          )
+        )
+      )
     }
   })
   
   observeEvent((input$set_ab), {
     showModal(modalDialog(
-      renderPlot({set_ab() + theme(axis.title = element_text(size = 26), text = element_text(size = 20))
-      }, height = 700), easyClose = TRUE, size = "l", footer = NULL
+      renderPlot({
+        set_ab() + theme(axis.title = element_text(size = 26),
+                         text = element_text(size = 20))
+      }, height = 700),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
     ))
   })
   
   observeEvent((input$ab_los), {
     showModal(modalDialog(
-      renderPlot({ab_los() + theme(axis.title = element_text(size = 26), text = element_text(size = 20))
-      }, height = 700), easyClose = TRUE, size = "l", footer = NULL
+      renderPlot({
+        ab_los() + theme(axis.title = element_text(size = 26),
+                         text = element_text(size = 20))
+      }, height = 700),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
     ))
   })
   
   observeEvent((input$spec_los), {
     showModal(modalDialog(
-      renderPlotly({spec_los()
-      }), easyClose = TRUE, size = "l", footer = NULL
+      renderPlotly({
+        spec_los()
+      }),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
     ))
   })
   
   # BOX 3 ------------------------------------------------------------------
   output$box2 <- renderUI({
-    if(input$tab == "Descriptive") {
-      tabBox(id = "box3", width = NULL,
-             tabPanel(title = "Blood cultures", tableOutput("set_table")),
-             tabPanel(title = "Specialties", tableOutput("specialties_table")),
-             tabPanel(title = "Antibiotics", tableOutput("set_table2")),
-             tabPanel(title = "Boxplot", plotlyOutput("bc_boxplot")),
-             tabPanel(title = "Route", tableOutput("adm_table")))
+    if (input$tab == "Descriptive") {
+      tabBox(
+        id = "box3",
+        width = NULL,
+        tabPanel(title = "Blood cultures", tableOutput("set_table")),
+        tabPanel(title = "Specialties", tableOutput("specialties_table")),
+        tabPanel(title = "Antibiotics", tableOutput("set_table2")),
+        tabPanel(title = "Boxplot", plotlyOutput("bc_boxplot")),
+        tabPanel(title = "Route", tableOutput("adm_table"))
+      )
     }
   })
   
-  # observeEvent((input$table1), {
-  #   showModal(modalDialog(
-  #     renderTable({set_table()
-  #     }, height = 300, digits = 1), renderPlot({bc_boxplot()+ theme(axis.title = element_text(size = 32))}, height = 300), easyClose = TRUE, size = "l", footer = NULL
-  #   ))
-  # })
-  # 
-  # observeEvent((input$table2), {
-  #   showModal(modalDialog(
-  #     renderTable({set_table2() 
-  #     }, height = 700, digits = 1), easyClose = TRUE, size = "l", footer = NULL
-  #   ))
-  # })
-  # 
-  # observeEvent((input$table3), {
-  #   showModal(modalDialog(
-  #     renderTable({specialties_table() 
-  #     }, height = 700, digits = 1), easyClose = TRUE, size = "l", footer = NULL
-  #   ))
-  # })
-  # 
-  # observeEvent((input$table4), {
-  #   showModal(modalDialog(
-  #     renderTable({patients() 
-  #     }, height = 700, digits = 1), easyClose = TRUE, size = "l", footer = NULL
-  #   ))
-  # })
-  # 
-  
-  
+
   # BOX 4 ------------------------------------------------------------------
   output$box4 <- renderUI({
-    if(input$tab == "Descriptive") {
-      div(style = "position: relative",
-          tabBox(id = "box4", width = NULL, height = 400,
-                 tabPanel(id = "study_dist", title = "Admissions - Count", withSpinner(plotOutput("bc_over_mul", height = 300), type = 4, color = "#CC0000", size = 0.7)),
-                 tabPanel(title = "Admissions - Proportion", withSpinner(plotOutput("bc_over_mul2", height = 300), type = 4, color = "#CC0000", size = 0.7)),
-                 div(style = "position:absolute;right:0.5em; bottom: 0.5em",
-                     conditionalPanel(
-                       "input.box4 == 'Admissions - Count'",
-                       actionBttn(
-                         inputId = "adm_count",
-                         icon = icon("search-plus"),
-                         style = "fill",
-                         color = "danger",
-                         size = "xs"
-                       )
-                     ),
-                     conditionalPanel(
-                       "input.box4 == 'Admissions - Proportion'",
-                       actionBttn(
-                         inputId = "adm_prop",
-                         icon = icon("search-plus"),
-                         style = "fill",
-                         color = "danger",
-                         size = "xs"
-                       )
-                     )
-                 )))
+    if (input$tab == "Descriptive") {
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box4",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            id = "study_dist",
+            title = "Admissions - Count",
+            withSpinner(
+              plotOutput("bc_over_mul", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "Admissions - Proportion",
+            withSpinner(
+              plotOutput("bc_over_mul2", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "DDD",
+            withSpinner(
+              plotOutput("DDD_all", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "Antibiotics - days",
+            withSpinner(
+              plotOutput("ab_days_iv", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
+            )
+          ),
+          div(
+            style = "position:absolute;right:0.5em; bottom: 0.5em",
+            conditionalPanel(
+              "input.box4 == 'Admissions - Count'",
+              actionBttn(
+                inputId = "adm_count",
+                icon = icon("search-plus"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
+            ),
+            conditionalPanel(
+              "input.box4 == 'Admissions - Proportion'",
+              actionBttn(
+                inputId = "adm_prop",
+                icon = icon("search-plus"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
+            )
+          )
+        )
+      )
       
     }
   })
   
   observeEvent((input$adm_count), {
     showModal(modalDialog(
-      renderPlot({adm_count() + theme(axis.title = element_text(size = 26), text = element_text(size = 20))
-      }, height = 700), easyClose = TRUE, size = "l", footer = NULL
+      renderPlot({
+        adm_count() + theme(axis.title = element_text(size = 26),
+                            text = element_text(size = 20))
+      }, height = 700),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
     ))
   })
   
   observeEvent((input$adm_prop), {
     showModal(modalDialog(
-      renderPlot({adm_prop() + theme(axis.title = element_text(size = 26), text = element_text(size = 20))
-      }, height = 700), easyClose = TRUE, size = "l", footer = NULL
+      renderPlot({
+        adm_prop() + theme(axis.title = element_text(size = 26),
+                           text = element_text(size = 20))
+      }, height = 700),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
     ))
   })
   
   # REG_BOX 1 ------------------------------------------------------------------
   output$reg <- renderUI({
-    if(input$tab == "Regression") {
+    if (input$tab == "Regression") {
       div(style = "position: relative",
-          tabBox(width = NULL, id = "box5", 
-                 tabPanel(id = "log_analysis", title = "Logistic regression model", dataTableOutput('log_analysis')),
-                 tabPanel(id = "logreg", title = "Logistic regression RAW", verbatimTextOutput("logreg"), verbatimTextOutput("hosh_test")),
-                 tabPanel(id = "logreg", title = "Forest plot", withSpinner(plotOutput("log_forest"), type = 4, color = "#CC0000", size = 0.7)),
-                 div(style = "position:absolute;right:0.5em; bottom: 0.5em",
-                     conditionalPanel(
-                       "input.box5 == 'Forest plot'",
-                       actionBttn(
-                         inputId = "forest",
-                         icon = icon("search-plus"),
-                         style = "fill",
-                         color = "danger",
-                         size = "xs"
-                       )
-                     ))))
+          tabBox(
+            width = NULL,
+            id = "box5",
+            tabPanel(
+              id = "log_analysis",
+              title = "Logistic regression model",
+              dataTableOutput('log_analysis')
+            ),
+            tabPanel(
+              id = "logreg",
+              title = "Logistic regression RAW",
+              verbatimTextOutput("logreg"),
+              verbatimTextOutput("hosh_test")
+            ),
+            tabPanel(
+              id = "logreg",
+              title = "Forest plot",
+              withSpinner(
+                plotOutput("log_forest"),
+                type = 4,
+                color = "#CC0000",
+                size = 0.7
+              )
+            ),
+            div(
+              style = "position:absolute;right:0.5em; bottom: 0.5em",
+              conditionalPanel(
+                "input.box5 == 'Forest plot'",
+                actionBttn(
+                  inputId = "forest",
+                  icon = icon("search-plus"),
+                  style = "fill",
+                  color = "danger",
+                  size = "xs"
+                )
+              )
+            )
+          ))
       
     }
   })
   
   observeEvent((input$forest), {
     showModal(modalDialog(
-      renderPlot({log_forest_zoom()
-      }, height = 700), easyClose = TRUE, size = "l", footer = NULL
+      renderPlot({
+        log_forest_zoom()
+      }, height = 700),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
     ))
   })
   
   # COX_BOX 1 ---------------------------------------------------------
   output$cox_box <- renderUI({
-    if(input$tab == "Regression") {
+    if (input$tab == "Regression") {
       div(style = "position: relative",
-          tabBox(width = NULL, id = "box6",
-                 tabPanel(id = "cox_analysis", title = "Cox regression - LOS", dataTableOutput("cox_analysis")),
-                 tabPanel(id = "coxboxraw", title = "Cox regression - LOS RAW", verbatimTextOutput("coxboxraw"),
-                          verbatimTextOutput("coxbox_aic")),
-                 tabPanel(id = "cox_forest", title = "Forest plot", withSpinner(plotOutput("cox_forest"), type = 4, color = "#CC0000", size = 0.7)), 
-                 div(style = "position:absolute;right:0.5em; bottom: 0.5em",
-                     conditionalPanel(
-                       "input.box6 == 'Forest plot'",
-                       actionBttn(
-                         inputId = "cox_forest",
-                         icon = icon("search-plus"),
-                         style = "fill",
-                         color = "danger",
-                         size = "xs"
-                       )
-                     ))))
+          tabBox(
+            width = NULL,
+            id = "box6",
+            tabPanel(
+              id = "cox_analysis",
+              title = "Cox regression - LOS",
+              dataTableOutput("cox_analysis")
+            ),
+            tabPanel(
+              id = "coxboxraw",
+              title = "Cox regression - LOS RAW",
+              verbatimTextOutput("coxboxraw"),
+              verbatimTextOutput("coxbox_aic")
+            ),
+            tabPanel(
+              id = "cox_forest",
+              title = "Forest plot",
+              withSpinner(
+                plotOutput("cox_forest"),
+                type = 4,
+                color = "#CC0000",
+                size = 0.7
+              )
+            ),
+            div(
+              style = "position:absolute;right:0.5em; bottom: 0.5em",
+              conditionalPanel(
+                "input.box6 == 'Forest plot'",
+                actionBttn(
+                  inputId = "cox_forest",
+                  icon = icon("search-plus"),
+                  style = "fill",
+                  color = "danger",
+                  size = "xs"
+                )
+              )
+            )
+          ))
     }
   })
   
   observeEvent((input$cox_forest), {
     showModal(modalDialog(
-      renderPlot({cox_forest_zoom()
-      }, height = 700), easyClose = TRUE, size = "l", footer = NULL
+      renderPlot({
+        cox_forest_zoom()
+      }, height = 700),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
     ))
   })
   
@@ -321,104 +547,156 @@ server <- function(input, output) {
   set_multiple_base <- reactive({
     input$button1
     isolate(
-      set_multiple %>% 
-        mutate(bc_check = if_else(bc_test %in% c(input$bc_checkInput), TRUE, FALSE)) %>%  
-        filter((ab_admin == 'IV' & ab_first == TRUE & start_within_24h == TRUE & ab_type %in% input$abInput),
-               (bc_check %in% input$bcInput),
-               (adm_route_sum %in% input$admissionInput),
-               (year %in% c(min(input$yearInput):max(input$yearInput))),
-               (specialty_general %in% input$specInput),
-               (!(specialty_detail %in% input$exInput)))
+      set_multiple %>%
+        mutate(bc_check = if_else(
+          bc_test %in% c(input$bc_checkInput), TRUE, FALSE
+        )) %>%
+        mutate(status = if_else(death_during_adm == FALSE, 1, 0)) %>%
+        filter((
+          ab_admin == 'IV' &
+            start_within_24h == TRUE & ab_type %in% input$abInput
+        ),
+        (bc_check %in% input$bcInput),
+        (adm_route_sum %in% input$admissionInput),
+        (year %in% c(
+          min(input$yearInput):max(input$yearInput)
+        )),
+        (specialty_general %in% input$specInput),
+        (!(specialty_detail %in% input$exInput))
+        )
     )
   })
-  
-  set_multiple_ab <- reactive({
-    input$button1
-    isolate(
-      set_multiple_reac_2() %>% 
-        group_by(ab_type) %>% count(ab_type)
-    )
-  })
-  
   
   set_multiple_reac_1 <- reactive({
-    set_multiple_base() %>% 
-      filter(ab_days_all_iv > input$durationInput) %>% 
-      distinct(nid,.keep_all = TRUE)
+    set_multiple_base() %>%
+      filter(ab_days_all > input$durationInput) %>%
+      distinct(id, .keep_all = TRUE)
   })
   
   set_multiple_reac_2 <- reactive({
-    set_multiple_base() %>% 
-      filter(ab_days_all_iv > input$durationInput)
+    set_multiple_base() %>%
+      filter(ab_days_all > input$durationInput)
   })
   
   set_multiple_ab <- reactive({
-    set_multiple_reac_2() %>% 
+    set_multiple_reac_2() %>%
       group_by(ab_type) %>% count(ab_type)
-    
   })
   
   
   output$bcInfoBox <- renderInfoBox({
-    i <- set_multiple_reac_1() %>% 
-      group_by(bc_check) %>% 
-      summarise(n = n()) %>% 
-      mutate(i = paste(round(n/sum(n) *100, digits = 1),"%")) %>% 
-      filter(bc_check == TRUE) %>% 
+    i <- set_multiple_reac_1() %>%
+      group_by(bc_check) %>%
+      summarise(n = n()) %>%
+      mutate(i = paste(round(n / sum(n) * 100, digits = 1), "%")) %>%
+      filter(bc_check == TRUE) %>%
       select(i)
     
     infoBox(
-      "Blood cultures", i, icon = icon("thumbs-o-up"), color = "black", fill = FALSE)
+      "Blood cultures",
+      i,
+      icon = icon("thumbs-o-up"),
+      color = "black",
+      fill = FALSE
+    )
   })
   
   output$patInfoBox <- renderInfoBox({
-    j <- set_multiple_reac_1() %>% 
-      group_by(bc_check) %>% 
-      summarise(n = n()) %>% 
-      mutate(sum = sum(n)) %>% 
+    j <- set_multiple_reac_1() %>%
+      group_by(bc_check) %>%
+      summarise(n = n()) %>%
+      mutate(sum = sum(n)) %>%
       select(sum)
     
     infoBox(
-      "Patients", j, icon = icon("user-circle"), color = "black", fill = FALSE)
+      "Patients",
+      j,
+      icon = icon("user-circle"),
+      color = "black",
+      fill = FALSE
+    )
   })
   
   output$yearInfoBox <- renderInfoBox({
-    k <- set_multiple_reac_1() %>% 
+    k <- set_multiple_reac_1() %>%
       mutate(min_year = min(year), max_year = max(year)) %>%
       select(min_year, max_year)
     k1 <- k$min_year
     k2 <- k$max_year
     
     infoBox(
-      "Year", paste0(k$min_year,"-",k$max_year), icon = icon("calendar"), color = "black", fill = FALSE)
+      "Year",
+      paste0(k$min_year, "-", k$max_year),
+      icon = icon("calendar"),
+      color = "black",
+      fill = FALSE
+    )
   })
   
   
   # BOX 1 -------------------------------------------------------
   
   set_plot <- reactive({
-    ggplot(set_multiple_reac_1(),aes(x = LOS, fill = bc_check)) +
-      geom_density(alpha = .3) +
-      geom_histogram(aes(y = ..density..),binwidth = 1, position = "dodge",alpha = .6, pch = 21) +
-      coord_cartesian(xlim = c(0,50))+
+    ggplot(set_multiple_reac_1(), aes(x = LOS, fill = bc_check)) +
+      geom_density(alpha = .3, adjust = 2) +
+      geom_histogram(
+        aes(y = ..density..),
+        binwidth = 1,
+        position = "dodge",
+        alpha = .6,
+        pch = 21
+      ) +
+      coord_cartesian(xlim = c(0, 20)) +
       scale_fill_discrete(name = "Blood culture", labels = c("Not taken", "Taken")) +
-      labs( x = "Length of stay (days)", y = "Density")
+      labs(x = "Length of stay (days)", y = "Density")
   })
   
   set_kaplan1 <- reactive({
-    f <- set_multiple_reac_1() #%>% mutate(bc_check = if_else(bc_check == TRUE, "Taken", "Not taken"))
-    kaplan <- survfit(Surv(LOS, event = status) ~ bc_check, data = f)
-    ggsurvplot(kaplan, data = set_multiple_reac_1(), color = "strata", pval = TRUE, conf.int = TRUE, pval.method = TRUE, break.time.by = 5, ylab = "Discharge probablility", 
-               xlab = "Length of stay (days)", legend.labs = c("Blood cultures : Not taken", "Blood cultures: Taken"),  xlim = c(0,50), break.x.by = 5)
+    f <-
+      set_multiple_reac_1() 
+    kaplan <-
+      survfit(Surv(LOS, event = status) ~ bc_check, data = f)
+    ggsurvplot(
+      kaplan,
+      data = set_multiple_reac_1(),
+      color = "strata",
+      pval = TRUE,
+      conf.int = TRUE,
+      pval.method = TRUE,
+      break.time.by = 5,
+      ylab = "Discharge probablility",
+      xlab = "Length of stay (days)",
+      legend.labs = c("Blood cultures : Not taken", "Blood cultures: Taken"),
+      xlim = c(0, 50),
+      break.x.by = 5
+    )
     
   })
   
   set_kaplan2 <- reactive({
-    f <- set_multiple_reac_1() #%>% mutate(bc_check = if_else(bc_check == TRUE, "Taken", "Not taken"))
-    kaplan <- survfit(Surv(LOS, event = status) ~ bc_check, data = f)
-    ggsurvplot(kaplan, data = set_multiple_reac_1(), color = "strata", pval = TRUE, conf.int = TRUE, pval.method = TRUE, break.time.by = 5, ylab = "Discharge probablility", 
-               xlab = "Length of stay (days)", legend.labs = c("Blood cultures : Not taken", "Blood cultures: Taken"),  ggtheme = 
-                 theme(axis.title = element_text(size = 26), text = element_text(size = 20)), xlim = c(0,50), break.x.by = 5)
+    f <-
+      set_multiple_reac_1() 
+    kaplan <-
+      survfit(Surv(LOS, event = status) ~ bc_check, data = f)
+    ggsurvplot(
+      kaplan,
+      data = set_multiple_reac_1(),
+      color = "strata",
+      pval = TRUE,
+      conf.int = TRUE,
+      pval.method = TRUE,
+      break.time.by = 5,
+      ylab = "Discharge probablility",
+      xlab = "Length of stay (days)",
+      legend.labs = c("Blood cultures : Not taken", "Blood cultures: Taken"),
+      ggtheme =
+        theme(
+          axis.title = element_text(size = 26),
+          text = element_text(size = 20)
+        ),
+      xlim = c(0, 50),
+      break.x.by = 5
+    )
   })
   
   output$log_rank_mul <- renderPlot({
@@ -430,21 +708,32 @@ server <- function(input, output) {
   })
   
   devel <- reactive({
-    outfile <- tempfile(fileext='.gif')
-    p <- ggplot(set_multiple_reac_1(),aes(x = LOS, fill = bc_check, frame = as.factor(year))) +
+    outfile <- tempfile(fileext = '.gif')
+    p <-
+      ggplot(set_multiple_reac_1(),
+             aes(
+               x = LOS,
+               fill = bc_check,
+               frame = as.factor(year)
+             )) +
       geom_density(alpha = .3) +
-      coord_cartesian(xlim = c(0,50))+
+      coord_cartesian(xlim = c(0, 20)) +
       scale_fill_discrete(name = "Blood culture", labels = c("Not taken", "Taken")) +
-      labs( x = "Length of stay (days)", y = "Density") 
+      labs(x = "Length of stay (days)", y = "Density")
     
-    gganimate(p, ani.width=520, ani.height=300, filename = "outfile.gif")
+    gganimate(p,
+              ani.width = 520,
+              ani.height = 300,
+              filename = "outfile.gif")
     
-    list(src = "outfile.gif",
-         contentType = 'image/gif',
-         width = 520,
-         height =300,
-         alt = "Year:"
-    )})
+    list(
+      src = "outfile.gif",
+      contentType = 'image/gif',
+      width = 520,
+      height = 300,
+      alt = "Year:"
+    )
+  })
   
   output$set_animate <- renderImage({
     devel()
@@ -456,11 +745,15 @@ server <- function(input, output) {
   # BOX 2 -------------------------------------------------------------------
   
   set_ab <- reactive({
-    ggplot(set_multiple_ab(), aes(x = reorder(ab_type,n), y = n, fill = n)) +
+    ggplot(set_multiple_ab(), aes(
+      x = reorder(ab_type, n),
+      y = n,
+      fill = n
+    )) +
       geom_bar(stat = "identity", color = "black") +
-      scale_fill_gradientn(colors = colorpicker("grijs", 32)) +
-      xlab(label = "Antibiotic") + ylab("Count") + 
-      guides(fill = "none") + 
+      scale_fill_gradient(high = "#606060", low = "#A9A9A9") +
+      xlab(label = "Antibiotic") + ylab("Count") +
+      guides(fill = "none") +
       coord_flip()
   })
   
@@ -470,9 +763,17 @@ server <- function(input, output) {
   
   
   ab_los <- reactive({
-    ggplot(set_multiple_reac_2(),aes(x = LOS, fill = ab_type )) + 
-      geom_histogram(aes(y = ..density..),binwidth = 1, position = "dodge",alpha = .6) + 
-      geom_density(alpha = .3) + coord_cartesian(xlim = c(0,50)) + scale_fill_discrete(name = "Antibiotic") + labs( x = "Length of stay (days)", y = "Density")
+    ggplot(set_multiple_reac_2(), aes(x = LOS, fill = ab_type)) +
+      geom_histogram(
+        aes(y = ..density..),
+        binwidth = 1,
+        position = "dodge",
+        alpha = .6
+      ) +
+      geom_density(alpha = .3, adjust = 2) + 
+      coord_cartesian(xlim = c(0, 20)) + 
+      scale_fill_discrete(name = "Antibiotic") + 
+      labs(x = "Length of stay (days)", y = "Density")
     
   })
   
@@ -481,14 +782,20 @@ server <- function(input, output) {
   })
   
   spec_los <- reactive({
-    s <- set_multiple_reac_1() %>% group_by(specialty_detail) %>% mutate(count = n()) %>% filter(count > 10)
-    p <- ggplot(s, aes(x = LOS, fill = specialty_detail)) + 
+    s <-
+      set_multiple_reac_1() %>% group_by(specialty_detail) %>% mutate(count = n()) %>% filter(count > 10)
+    p <- ggplot(s, aes(x = LOS, fill = specialty_detail)) +
       geom_density(alpha = .3) +
-      geom_histogram(aes(y = ..density..),binwidth = 1, position = "dodge",alpha = .6) + 
-      coord_cartesian(xlim = c(0,50)) + 
-      guides(fill = "none") + 
-      theme(legend.position='none') +
-      labs( x = "Length of stay (days)", y = "Density")
+      geom_histogram(
+        aes(y = ..density..),
+        binwidth = 1,
+        position = "dodge",
+        alpha = .6
+      ) +
+      coord_cartesian(xlim = c(0, 20)) +
+      guides(fill = "none") +
+      theme(legend.position = 'none') +
+      labs(x = "Length of stay (days)", y = "Density")
     ggplotly(p)
   })
   
@@ -498,12 +805,14 @@ server <- function(input, output) {
   
   output$gender <- renderPlot({
     labels <- c("FALSE" = "Not taken", "TRUE" = "Taken")
-    ggplot(set_multiple_reac_1(), aes(x = gender, fill = bc_check)) + 
-      geom_bar(aes(y=..prop.., group = 1),position = "dodge", color = "black") +  
-      scale_x_discrete(labels = c("Female", "Male", "Female", "Male")) + 
-      facet_wrap(~ bc_check, labeller = labeller(bc_check = labels)) + 
-      labs( x = "Gender", y = "Proportion") + 
-      guides(fill = FALSE) 
+    ggplot(set_multiple_reac_1(), aes(x = gender, fill = bc_check)) +
+      geom_bar(aes(y = ..prop.., group = 1),
+               position = "dodge",
+               color = "black") +
+      scale_x_discrete(labels = c("Female", "Male", "Female", "Male")) +
+      facet_wrap( ~ bc_check, labeller = labeller(bc_check = labels)) +
+      labs(x = "Gender", y = "Proportion") +
+      guides(fill = FALSE)
   })
   
   
@@ -511,10 +820,16 @@ server <- function(input, output) {
     labels <- c("FALSE" = "Not taken", "TRUE" = "Taken")
     ggplot(set_multiple_reac_1(), aes(x = as.numeric(age), fill = bc_check)) +
       geom_density(alpha = .3) +
-      geom_histogram(aes(y = ..density..),binwidth = 1, position = "dodge",alpha = .6, pch = 21) +
-      facet_wrap(~ bc_check, labeller = labeller(bc_check = labels)) + 
-      labs( x = "Age", y = "Count") + 
-      guides(fill = FALSE) 
+      geom_histogram(
+        aes(y = ..density..),
+        binwidth = 1,
+        position = "dodge",
+        alpha = .6,
+        pch = 21
+      ) +
+      facet_wrap( ~ bc_check, labeller = labeller(bc_check = labels)) +
+      labs(x = "Age", y = "Count") +
+      guides(fill = FALSE)
   })
   
   
@@ -522,11 +837,19 @@ server <- function(input, output) {
   # BOX 3 ---------------------------------------
   
   set_table <- reactive({
-    set_multiple_reac_1() %>% 
-      mutate(bc_check = if_else(bc_check == TRUE, "Taken", "Not taken")) %>% 
-      group_by(bc_check) %>% 
-      summarise("Mean LOS" = mean(LOS), "Median LOS" = median(LOS), Q1 = quantile(LOS,0.25), Q3 = quantile(LOS,0.75),n = n()) %>% 
-      mutate(Proportion = paste((round(n/sum(n)*100, digits = 1)), "%")) %>% 
+    set_multiple_reac_1() %>%
+      mutate(bc_check = if_else(bc_check == TRUE, "Taken", "Not taken")) %>%
+      group_by(bc_check) %>%
+      summarise(
+        "Mean LOS" = mean(LOS),
+        "Median LOS" = median(LOS),
+        Q1 = quantile(LOS, 0.25),
+        Q3 = quantile(LOS, 0.75),
+        n = n()
+      ) %>%
+      mutate(Proportion = paste((round(
+        n / sum(n) * 100, digits = 1
+      )), "%")) %>%
       rename("Blood cultures" = bc_check)
   })
   
@@ -536,15 +859,22 @@ server <- function(input, output) {
   
   bc_boxplot <- reactive({
     s <- set_multiple_reac_1()
-    s$bc_check <- factor(s$bc_check, levels = c("TRUE", "FALSE"), labels = c("Taken", "Not taken")) 
+    s$bc_check <-
+      factor(
+        s$bc_check,
+        levels = c("TRUE", "FALSE"),
+        labels = c("Taken", "Not taken")
+      )
     b <- ggplot(s, aes(x = bc_check, y = LOS, fill = bc_check)) +
-      geom_boxplot(color = "black", alpha = 0.5, outlier.colour = "NA") + 
-      scale_x_discrete(labels = c("Taken", "Not taken")) + 
+      geom_boxplot(color = "black",
+                   alpha = 0.5,
+                   outlier.colour = "NA") +
+      scale_x_discrete(labels = c("Taken", "Not taken")) +
       guides(fill = "none") +
       scale_fill_manual(values = c("#00BFC4", "#F8766D")) +
-      labs(x = "Blood cultures", y = "Length of stay (days)") + 
-      coord_cartesian(ylim = c(0,30))+
-      theme(legend.position='none')
+      labs(x = "Blood cultures", y = "Length of stay (days)") +
+      coord_cartesian(ylim = c(0, 20)) +
+      theme(legend.position = 'none')
     ggplotly(b)
   })
   
@@ -553,11 +883,19 @@ server <- function(input, output) {
   })
   
   set_table2 <- reactive({
-    set_multiple_reac_2() %>% 
-      group_by(ab_type) %>% 
-      summarise("Mean LOS" = mean(LOS), "Median LOS" = median(LOS), Q1 = quantile(LOS,0.25), Q3 = quantile(LOS,0.75),n = n()) %>% 
-      arrange(desc(n)) %>% 
-      mutate(Proportion = paste((round(n/sum(n)*100, digits = 1)), "%")) %>% 
+    set_multiple_reac_2() %>%
+      group_by(ab_type) %>%
+      summarise(
+        "Mean LOS" = mean(LOS),
+        "Median LOS" = median(LOS),
+        Q1 = quantile(LOS, 0.25),
+        Q3 = quantile(LOS, 0.75),
+        n = n()
+      ) %>%
+      arrange(desc(n)) %>%
+      mutate(Proportion = paste((round(
+        n / sum(n) * 100, digits = 1
+      )), "%")) %>%
       rename("Antibiotic" = ab_type)
   })
   
@@ -568,12 +906,25 @@ server <- function(input, output) {
   
   specialties_table <- reactive({
     s <- set_multiple_reac_1()
-    s$bc_check <- factor(s$bc_check, levels = c("TRUE", "FALSE"), labels = c("Taken", "Not taken"))
-    s %>% 
-      group_by(specialty_general, bc_check) %>% rename("Blood cultures" = bc_check) %>% 
-      summarise("Mean LOS" = mean(LOS), "Median LOS" = median(LOS), Q1 = quantile(LOS,0.25), Q3 = quantile(LOS,0.75),n = n()) %>% 
-      mutate(Proportion = paste((round(n/sum(n)*100, digits = 1)), "%")) %>% 
-      rename("Specialty" = specialty_general) 
+    s$bc_check <-
+      factor(
+        s$bc_check,
+        levels = c("TRUE", "FALSE"),
+        labels = c("Taken", "Not taken")
+      )
+    s %>%
+      group_by(specialty_general, bc_check) %>% rename("Blood cultures" = bc_check) %>%
+      summarise(
+        "Mean LOS" = mean(LOS),
+        "Median LOS" = median(LOS),
+        Q1 = quantile(LOS, 0.25),
+        Q3 = quantile(LOS, 0.75),
+        n = n()
+      ) %>%
+      mutate(Proportion = paste((round(
+        n / sum(n) * 100, digits = 1
+      )), "%")) %>%
+      rename("Specialty" = specialty_general)
   })
   
   
@@ -584,57 +935,43 @@ server <- function(input, output) {
   
   route_table <- reactive({
     a <- set_multiple_reac_1()
-    a$bc_check <- factor(a$bc_check, levels = c("TRUE", "FALSE"), labels = c("Taken", "Not taken"))
-    a %>% 
+    a$bc_check <-
+      factor(
+        a$bc_check,
+        levels = c("TRUE", "FALSE"),
+        labels = c("Taken", "Not taken")
+      )
+    a %>%
       group_by(adm_route_sum, bc_check) %>%
-      summarise("Mean LOS" = mean(LOS), "Median LOS" = median(LOS), Q1 = quantile(LOS,0.25), Q3 = quantile(LOS,0.75),n = n()) %>% 
-      mutate("Prop." = paste((round(n/sum(n)*100, digits = 1)), "%")) %>% arrange(adm_route_sum, bc_check) %>% 
-      rename("Route of admission" = adm_route_sum, "Blood cultures" = bc_check)
+      summarise(
+        "Mean LOS" = mean(LOS),
+        "Median LOS" = median(LOS),
+        Q1 = quantile(LOS, 0.25),
+        Q3 = quantile(LOS, 0.75),
+        n = n()
+      ) %>%
+      mutate("Prop." = paste((round(
+        n / sum(n) * 100, digits = 1
+      )), "%")) %>% arrange(adm_route_sum, bc_check) %>%
+      rename("Route of admission" = adm_route_sum,
+             "Blood cultures" = bc_check)
   })
   
-  output$adm_table<- renderTable({
+  output$adm_table <- renderTable({
     route_table()
   }, digits = 1)
   
   
-  # patients <- reactive({
-  #   f1 <- as.tibble("Women")
-  #   f <- set_multiple_reac_1() %>% 
-  #     filter(gender == "F") %>% 
-  #     group_by(bc_check) %>% 
-  #     summarise("Mean LOS" = round(mean(LOS), digits = 1), "Median LOS" = round(median(LOS), digits = 1), "Mean age" = round(mean(age), digits = 1), n = n()) %>% 
-  #     mutate(Proportion = paste((round(n/sum(n)*100, digits = 1)), "%"))
-  #   m1 <- as.tibble("Men")
-  #   m <- set_multiple_reac_1() %>% 
-  #     filter(gender == "M") %>% 
-  #     group_by(bc_check) %>% 
-  #     summarise("Mean LOS" = round(mean(LOS), digits = 1), "Median LOS" = round(median(LOS), digits = 1), "Mean age" = round(mean(age), digits = 1), n = n()) %>% 
-  #     mutate(Proportion = paste((round(n/sum(n)*100, digits = 1)), "%"))
-  #   p <- bind_rows(f1, f, m1, m)
-  #   p[is.na(p)] <- as.character("")
-  #   p$bc_check[p$bc_check == TRUE] <- "Taken"
-  #   p$bc_check[p$bc_check == FALSE] <- "Not taken"
-  #   
-  #   p %>% rename("Gender" = value, "Blood cultures" = bc_check)
-  # })
-  # 
-  # output$patients <- renderTable({
-  #   patients()
-  #   
-  # })
-  
   # BOX 4 ---------------------------------------------------------------------------------------
   
   adm_count <- reactive({
-    set_overall_mul <- set_multiple_reac_1() %>% mutate(quarter = quarter(adm_start_date)) %>% 
-      mutate(yearquarter = paste(year, quarter, sep = "-")) #%>% 
-    #group_by(yearquarter, bc_check) %>% 
-    #summarise(n = n()) 
-    ggplot(set_overall_mul, aes(yearquarter,fill = bc_check)) + 
-      geom_bar(position = "stack", color = "black") + 
-      #geom_smooth(method = 'lm', se = FALSE) +
-      scale_fill_discrete(name = 'Blood culture', labels = c("Not taken", "Taken")) + 
-      theme(axis.text.x=element_text(angle=90,hjust=1)) + 
+    set_overall_mul <-
+      set_multiple_reac_1() %>% mutate(quarter = quarter(adm_start_date)) %>%
+      mutate(yearquarter = paste(year, quarter, sep = "-")) 
+    ggplot(set_overall_mul, aes(yearquarter, fill = bc_check)) +
+      geom_bar(position = "stack", color = "black") +
+      scale_fill_discrete(name = 'Blood culture', labels = c("Not taken", "Taken")) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
       labs(x = "Quarter", y = "Count")
   })
   
@@ -643,17 +980,34 @@ server <- function(input, output) {
   })
   
   adm_prop <- reactive({
-    set_overall_mul <- set_multiple_reac_1() %>% mutate(quarter = quarter(adm_start_date)) %>% 
+    set_overall_mul <-
+      set_multiple_reac_1() %>% mutate(quarter = quarter(adm_start_date)) %>%
       mutate(yearquarter = paste(year, quarter, sep = "-"))
-    ggplot(set_overall_mul, aes(yearquarter, fill = bc_check)) + 
-      geom_bar(position = "fill", color = "black") + 
-      scale_fill_discrete(name = 'Blood culture', labels = c("Not taken", "Taken")) + 
-      theme(axis.text.x=element_text(angle=90,hjust=1)) + 
+    ggplot(set_overall_mul, aes(yearquarter, fill = bc_check)) +
+      geom_bar(position = "fill", color = "black") +
+      scale_fill_discrete(name = 'Blood culture', labels = c("Not taken", "Taken")) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
       labs(x = "Quarter", y = "Count")
   })
   
   output$bc_over_mul2 <- renderPlot({
     adm_prop()
+  })
+  
+  output$DDD_all <- renderPlot({
+    ggplot(set_multiple_reac_1(),
+           aes(bc_check, DDD_all_iv, fill = bc_check)) +
+      geom_boxplot() +
+      scale_fill_discrete(name = 'Blood culture', labels = c("Not taken", "Taken")) +
+      coord_cartesian(ylim = c(0, 50))
+  })
+  
+  output$ab_days_iv <- renderPlot({
+    ggplot(set_multiple_reac_1(),
+           aes(bc_check, ab_days_all, fill = bc_check)) +
+      geom_boxplot() +
+      scale_fill_discrete(name = 'Blood culture', labels = c("Not taken", "Taken")) +
+      coord_cartesian(ylim = c(0, 20))
   })
   
   
@@ -664,19 +1018,24 @@ server <- function(input, output) {
     as.formula(paste0(input$depInput, paste(input$modelInput, collapse = "+")))
   })
   
-  logreg <- reactive({glm(fml(), data = set_multiple_reac_1(), family = binomial)})
+  logreg <-
+    reactive({
+      glm(fml(), data = set_multiple_reac_1(), family = binomial)
+    })
   
   fml_cox <- reactive({
-    as.formula(paste0("Surv(LOS, event = status)", "~", "bc_check", "+", paste(input$modelInput,collapse = "+")))
+    as.formula(paste0(
+      "Surv(LOS, event = status)",
+      "~",
+      "bc_check",
+      "+",
+      paste(input$modelInput, collapse = "+")
+    ))
   })
   
-  cox_data <- reactive({
-    s <- set_multiple_reac_1()
-    #s$bc_check <- factor(as.character(s$bc_check), levels = c("TRUE", "FALSE"), labels = c("Taken", "Not taken"))
-    s
+  coxreg <- reactive({
+    coxph(fml_cox(), data = set_multiple_reac_1())
   })
-  
-  coxreg <- reactive({coxph(fml_cox(), data = cox_data())})
   
   # LOG REG RAW -------------------------------------
   
@@ -691,7 +1050,7 @@ server <- function(input, output) {
   # COX BOX RAW ----------------------------
   
   output$coxboxraw <- renderPrint({
-    summary(coxreg()) 
+    summary(coxreg())
   })
   
   output$coxbox_aic <- renderPrint({
@@ -699,18 +1058,34 @@ server <- function(input, output) {
   })
   
   output$hosh_test <- renderPrint({
-    t <- set_multiple_reac_1() %>% mutate(bc_check = if_else(bc_check == TRUE, 1, 0))
+    t <-
+      set_multiple_reac_1() %>% mutate(bc_check = if_else(bc_check == TRUE, 1, 0))
     hoslem.test(x = t$bc_check, fitted(logreg()))
   })
   
   cox_forest_zoom <- reactive({
-    #set_theme(base = theme_grey(), axis.textsize = 1.5, geom.label.size = 8 , geom.errorbar.size = 1.2,axis.title.size = 3, geom.outline.size = 1, title.size = 2, geom.outline.color = "#CC0000")
-    plot_model(coxreg(), title = "",  show.values = FALSE, value.size = 8, dot.size = 8, line.size = 3, axis.title = "Hazard ratio")
+    plot_model(
+      coxreg(),
+      title = "",
+      show.values = FALSE,
+      value.size = 8,
+      dot.size = 8,
+      line.size = 3,
+      axis.title = "Hazard ratio"
+    )
   })
   
   output$cox_forest <- renderPlot({
-    #set_theme(base = theme_grey())
-    plot_model(coxreg(), title = "Hazard ratio for hospital discharge",  show.values = FALSE, value.size = 5, dot.size = 5, line.size = 2, axis.title = "Hazard ratio", grid.breaks = 1)
+    plot_model(
+      coxreg(),
+      title = "Hazard ratio for hospital discharge",
+      show.values = FALSE,
+      value.size = 5,
+      dot.size = 5,
+      line.size = 2,
+      axis.title = "Hazard ratio",
+      grid.breaks = 1
+    )
     
   })
   
@@ -720,28 +1095,55 @@ server <- function(input, output) {
     if (is.null(input$modelInput))
       return(NULL)
     
-    t <- bind_cols(tidy(exp(coef(logreg()))), tidy(logreg()))
+    t <- bind_cols(tidy(exp(coef(logreg(
+    )))), tidy(logreg()))
     
-    t <- t %>% rename("Independent variable" = "names", "OR" = "x", "Std.Error" = "std.error", "p" = "p.value") %>% 
-      select(-term,-estimate,-statistic) %>% mutate_if(is.numeric, round, digits = 2) %>% filter(OR < 10)
-    # t$Std.Error <- format(round(t$Std.Error, digits = 2), nsmall = 2)
-    # t$p <- format(round(t$p, digits = 3), nsmall = 3)
-    # t$`(Intercept)` <- round(t$`(Intercept)`, digits = 2)
+    t <-
+      t %>% rename(
+        "Independent variable" = "names",
+        "OR" = "x",
+        "Std.Error" = "std.error",
+        "p" = "p.value"
+      ) %>%
+      select(-term, -estimate, -statistic) %>% mutate_if(is.numeric, round, digits = 2) %>% filter(OR < 10)
+    
     datatable(t, options = list(dom = 't', pageLength = 100))
   }, digits = 2)
   
   output$log_forest <- renderPlot({
     set_theme(base = theme_grey())
-    plot_model(logreg(), title = "Odds ratio for dependent variable",  show.values = FALSE, value.size = 5, dot.size = 5, line.size = 2)
+    plot_model(
+      logreg(),
+      title = "Odds ratio for dependent variable",
+      show.values = FALSE,
+      value.size = 5,
+      dot.size = 5,
+      line.size = 2
+    )
   })
   
   
   log_forest_zoom <- reactive({
-    set_theme(base = theme_grey(), axis.textsize = 1.5, geom.label.size = 8 , geom.errorbar.size = 1.2,axis.title.size = 3, geom.outline.size = 1, title.size = 2, geom.outline.color = "#CC0000")
-    plot_model(logreg(), title = "",  show.values = FALSE, value.size = 8, dot.size = 8, line.size = 3)
+    set_theme(
+      base = theme_grey(),
+      axis.textsize = 1.5,
+      geom.label.size = 8 ,
+      geom.errorbar.size = 1.2,
+      axis.title.size = 3,
+      geom.outline.size = 1,
+      title.size = 2,
+      geom.outline.color = "#CC0000"
+    )
+    plot_model(
+      logreg(),
+      title = "",
+      show.values = FALSE,
+      value.size = 8,
+      dot.size = 8,
+      line.size = 3
+    )
     
   })
-  
   
   
   # COX ANALYSIS OUTPUT --------------------------------------------------
@@ -750,12 +1152,20 @@ server <- function(input, output) {
     if (is.null(input$modelInput))
       return(NULL)
     
-    c <- bind_cols(tidy(exp(coef(coxreg()))), tidy(coxreg()))
+    c <- bind_cols(tidy(exp(coef(coxreg(
+    )))), tidy(coxreg()))
     
-    c <- c %>% rename("Independent variable" = "names", "HR" = "x", "Std.Error" = "std.error", "p" = "p.value") %>% 
-      select(-term,-estimate,-statistic, -conf.low, -conf.high)
+    c <-
+      c %>% rename(
+        "Independent variable" = "names",
+        "HR" = "x",
+        "Std.Error" = "std.error",
+        "p" = "p.value"
+      ) %>%
+      select(-term, -estimate, -statistic,-conf.low,-conf.high)
     c$HR <- format(round(as.numeric(c$HR), digits = 2), nsmall = 2)
-    c$Std.Error <- format(round(as.numeric(c$Std.Error), digits = 2), nsmall = 2)
+    c$Std.Error <-
+      format(round(as.numeric(c$Std.Error), digits = 2), nsmall = 2)
     c$p <- format(round(as.numeric(c$p), digits = 3), nsmall = 3)
     datatable(c, options = list(dom = 't', pageLength = 100))
   })
@@ -774,4 +1184,3 @@ server <- function(input, output) {
   )
   
 }
-
