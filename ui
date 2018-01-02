@@ -1,4 +1,3 @@
-
 library(shiny)
 library(shinydashboard)
 library(shinycssloaders)
@@ -6,264 +5,322 @@ library(shinyjs)
 library(shinyWidgets)
 library(shinyBS)
 
-
-dbHeader <- dashboardHeader(title = "IV ANTIBIOTICS & BLOOD CULTURES", titleWidth = 600, 
-                            
-                            
-                            tags$li(a(href = 'http://pronkjewail.org/esr-4-4/',
-                                      icon("power-off"),
-                                      title = "Pronkjewail home"),
-                                    class = "dropdown"))
-
-ui <- dashboardPage( skin = "red",
-                     
-                     dbHeader,
-                     
-                     # dashboardHeader(title = "IV ANTIBIOTICS & BLOOD CULTURES", 
-                     #                 titleWidth = 600, 
-                     #                 tags$li(class = "dropdown",
-                     #                         tags$style(".main-header {max-height: 80px}"),
-                     #                         tags$style(".main-header .logo {height: 80px}")
-                     #                 )),
-                     dashboardSidebar(
-                       width = 300,
-                       sidebarMenu(
-                         menuItem(
-                           "Anaylsis",
-                           icon = icon("bar-chart"),
-                           selectInput(
-                             "tab",
-                             choices = c("", "Descriptive", "Regression"),
-                             label = "",
-                             selected = NULL,
-                             multiple = FALSE
-                           )
-                         ),
-                         br(),
-                         conditionalPanel(
-                           condition = "input.tab == 'Regression'",
-                           checkboxGroupInput(
-                             inputId = "modelInput",
-                             label = "Input variables",
-                             choiceNames = c(
-                               "Year",
-                               "Specialty",
-                               "Antibiotics",
-                               "Age",
-                               "Gender",
-                               "Route",
-                               "Weekday",
-                               "Sub-specialty"
-                             ),
-                             choiceValues = c(
-                               "year",
-                               "specialty_general",
-                               "ab_type",
-                               "age",
-                               "gender",
-                               "adm_route_sum",
-                               "adm_weekday",
-                               "specialty_detail"
-                             ),
-                             selected = c("year", "adm_weekday", "specialty_detail", "ab_type")
-                           ),
-                           selectInput(
-                             inputId = "depInput",
-                             label = "Dependent variable",
-                             choices = list(
-                               "Blood culture taken" = "bc_check ~ ",
-                               "Death during admission" = "death_during_adm ~ bc_check +" 
-                             ),
-                             selected = "bc_check"
-                           )
-                         ),
-                         menuItem(
-                           "Blood cultures taken",
-                           tabName = "taken",
-                           icon = icon("thumbs-up"),
-                           checkboxGroupInput(
-                             inputId = "bcInput",
-                             label = "Blood culture",
-                             choiceNames = c('Taken', "Not taken"),
-                             choiceValues = c(TRUE, FALSE),
-                             selected = c(TRUE, FALSE),
-                             inline = TRUE
-                           )
-                         )
-                       ),
-                       br(),
-                       sidebarMenu(menuItem(
-                         "Timing of blood culture",
-                         icon = icon("clock-o"),
-                         tabName = "time",
-                         checkboxGroupInput(
-                           inputId = 'bc_checkInput',
-                           label = 'Time of blood culture',
-                           choiceNames = c(
-                             "Day before start of antibiotics",
-                             'Same day as start of antibiotics',
-                             'Day after start of antibiotics'
-                           ),
-                           choiceValues = c((-1), 0, 1),
-                           selected = 0
-                         )
-                       )),
-                       br(),
-                       sidebarMenu(menuItem(
-                         "Duration of use ≥ ...days",
-                         tabName = "duration",
-                         icon = icon("hourglass-half"),
-                         sliderInput(
-                           inputId = 'durationInput',
-                           label = 'Duration of use more than (days)',
-                           value = 2L,
-                           min = 1L,
-                           max = 5L,
-                           step = 1L
-                         )
-                       )),
-                       br(),
-                       sidebarMenu(menuItem(
-                         "Year",
-                         tabName = "year",
-                         icon = icon("calendar"),
-                         sliderInput(
-                           inputId = 'yearInput',
-                           label = 'Year',
-                           value = c(2009L,2016L),
-                           min = 2009L,
-                           max =2016L,
-                           step = 1L
-                         )
-                       )),
-                       br(),
-                       sidebarMenu(menuItem(
-                         "Route of admission",
-                         tabName = "admission",
-                         icon = icon("ambulance"),
-                         checkboxGroupInput(
-                           inputId = 'admissionInput',
-                           label = '',
-                           choiceValues = c("er", "gp", "hospital_referral", "other_umc", "policlinic", "other"),
-                           choiceNames = c("ER", "GP", "Hospital referral", "Other UMC", "Policlinic", "Other"),
-                           selected = c("er", "gp", "hospital_referral", "other_umc", "policlinic", "other")
-                         )
-                       )),
-                       br(),
-                       sidebarMenu(menuItem(
-                         "Specialty",
-                         tabName = "specialty",
-                         icon = icon("user-md"),
-                         checkboxGroupInput(
-                           inputId = 'specInput',
-                           label = 'Specialty',
-                           choices = c('Internal medicine', 'Surgery', 'Other'),
-                           selected = c('Internal medicine', 'Surgery', 'Other')
-                         )
-                       )),
-                       br(),
-                       sidebarMenu(menuItem(
-                         "Exclude specialty",
-                         tabName = "exclude",
-                         icon = icon("exclamation-circle"),
-                         selectInput(
-                           inputId = "exInput",
-                           label = "Exclude sub-specialty",
-                           choices = levels(as.factor(set_multiple$specialty_detail)),
-                           multiple = TRUE
-                         )
-                       )),
-                       br(),
-                       sidebarMenu(menuItem(
-                         "Antibiotics",
-                         tabName = "antibiotics",
-                         icon = icon("spinner"),
-                         checkboxGroupInput(
-                           inputId = 'abInput',
-                           label = '',
-                           choices = ab_on_admission$ab_type
-                           
-                         )
-                       )),
-                       br(), 
-                       div(style = "display:inline-block;width:32%;text-align: left;;", actionButton(inputId = "button1", icon = icon("bar-chart-o"), label = "GO!"), style = "float: center"),
-                       br(),
-                       br(),
-                       br(),
-                       sidebarMenu(menuItem(
-                         "Download dataset",
-                         tabName = "download",
-                         icon = icon("download"),
-                         textInput(
-                           inputId = 'filename',placeholder = "Name your file",
-                           label = ''
-                         ),
-                         div(style = "color: #CC0000;backgroud-color: #FFFFFF; display:inline-block;width:32%;text-align: left;;",       downloadButton(outputId = "downloadData", label = "Save!", icon = icon("download"), style = "float: center"))
-                         
-                       ))
-                       
-                     ),
-                     dashboardBody(
-                       
-                       
-                       tags$head(
-                         tags$style(
-                           HTML(
-                             '
-                             .info-box {min-height: 55px; float: center}
-                             .info-box-icon {height: 55px; line-height: 55px;}
-                             .main-header
-                             .logo {
-                             font-family: "Helvetica Neue", sans-serif;
-                             font-weight: bold;
-                             letter-spacing:-1px;
-                             font-size: 30px;
-                             color: #CC0000;
-                             background: "red"
-                             }
-                             .modal-dialog{ width:1000px}
-                             .modal-body{ min-height:700px; align: center}
-                             .modal-sm {
-                             width: 1200px; align:center
-                             }
-                             
-                             .sidebar { height: 90vh; overflow-y: auto; }
-                             '))),
-                       
-                       
-                       
-                       fluidRow(
-                         
-                         infoBoxOutput("bcInfoBox"),
-                         infoBoxOutput("patInfoBox"),
-                         infoBoxOutput("yearInfoBox")),
-                       
-                       
-                       fluidRow(
-                         
-                         
-                         column(width = 6, 
-                                uiOutput(outputId = "box1"),
-                                uiOutput(outputId = "box2"),
-                                uiOutput(outputId = "reg"),
-                                br(),
-                                br(),
-                                uiOutput(outputId = "log_raw_box")),
-                         
-                         
-                         column(width = 6,
-                                uiOutput(outputId = "box3"),
-                                uiOutput(outputId = "box4"),
-                                uiOutput(outputId = "cox_box"),
-                                br(),
-                                br(),
-                                uiOutput(outputId = "cox_box_raw"))
-                         
-                         
-                       )
-                       
-                       
-                           )
-                         )
+dbHeader <-
+  dashboardHeader(
+    title = span(img(src = "radar.svg", height = 35), "RadaR"),
+    titleWidth = 300,
+    
+    tags$li(a(
+      strong("SAMPLE DATA MODE"),
+      height = 40,
+      icon("lock"),
+      title = "Sample Data Mode"
+    ),
+    class = "dropdown"),
+    
+    tags$li(
+      a(
+        strong("ABOUT RadaR "),
+        height = 40,
+        href = 'https://github.com/ceefluz/radar/blob/master/README.md',
+        icon("external-link"),
+        title = "",
+        target = "_blank"
+      ),
+      class = "dropdown"
+    ),
+    
+    tags$li(
+      a(href = 'http://pronkjewail.org/esr-4-4/',
+        icon("power-off"),
+        title = "Pronkjewail home"),
+      class = "dropdown"
+    )
+  )
 
 
+ui <- dashboardPage(
+  skin = "red",
+  title = "RadaR",
+  
+  dbHeader,
+  
+  dashboardSidebar(
+    width = 300,
+    sidebarMenu(
+      menuItem(
+        "Anaylsis",
+        icon = icon("bar-chart"),
+        selectInput(
+          "tab",
+          choices = c("", "Descriptive", "Regression"),
+          label = "",
+          selected = NULL,
+          multiple = FALSE
+        )
+      ),
+      br(),
+      conditionalPanel(
+        condition = "input.tab == 'Regression'",
+        checkboxGroupInput(
+          inputId = "modelInput",
+          label = "Input variables",
+          choiceNames = c(
+            "Year",
+            "Specialty",
+            "Antibiotics",
+            "Age",
+            "Gender",
+            "Route",
+            "Weekday",
+            "Sub-specialty"
+          ),
+          choiceValues = c(
+            "year",
+            "specialty_general",
+            "ab_type",
+            "age",
+            "gender",
+            "adm_route_sum",
+            "adm_weekday",
+            "specialty_detail"
+          ),
+          selected = c("year", "adm_weekday", "specialty_detail", "ab_type")
+        ),
+        selectInput(
+          inputId = "depInput",
+          label = "Dependent variable",
+          choices = list(
+            "Blood culture taken" = "bc_check ~ ",
+            "Death during admission" = "death_during_adm ~ bc_check +"
+          ),
+          selected = "bc_check"
+        )
+      ),
+      menuItem(
+        "Antibiotics",
+        tabName = "antibiotics",
+        icon = icon("spinner"),
+        checkboxGroupInput(
+          inputId = 'abInput',
+          label = '',
+          choices = ab$ab_type
+        )
+      ),
+      br(),
+      menuItem(
+        "Blood cultures taken",
+        tabName = "taken",
+        icon = icon("thumbs-up"),
+        checkboxGroupInput(
+          inputId = "bcInput",
+          label = "Blood culture",
+          choiceNames = c('Taken', "Not taken"),
+          choiceValues = c(TRUE, FALSE),
+          selected = c(TRUE, FALSE),
+          inline = TRUE
+        )
+      )
+    ),
+    br(),
+    sidebarMenu(
+      menuItem(
+        "Timing of blood culture",
+        icon = icon("clock-o"),
+        tabName = "time",
+        checkboxGroupInput(
+          inputId = 'bc_checkInput',
+          label = 'Time of blood culture',
+          choiceNames = c(
+            "Day before start of antibiotics",
+            'Same day as start of antibiotics',
+            'Day after start of antibiotics'
+          ),
+          choiceValues = c((-1), 0, 1),
+          selected = c((-1), 0, 1)
+        )
+      )
+    ),
+    br(),
+    sidebarMenu(
+      menuItem(
+        "Duration of use ≥ ...days",
+        tabName = "duration",
+        icon = icon("hourglass-half"),
+        sliderInput(
+          inputId = 'durationInput',
+          label = 'Duration of use more than (days)',
+          value = 2L,
+          min = 1L,
+          max = 5L,
+          step = 1L
+        )
+      )
+    ),
+    br(),
+    sidebarMenu(menuItem(
+      "Year",
+      tabName = "year",
+      icon = icon("calendar"),
+      sliderInput(
+        inputId = 'yearInput',
+        label = 'Year',
+        value = c(2009L, 2016L),
+        min = 2009L,
+        max = 2016L,
+        step = 1L
+      )
+    )),
+    br(),
+    sidebarMenu(
+      menuItem(
+        "Route of admission",
+        tabName = "admission",
+        icon = icon("ambulance"),
+        checkboxGroupInput(
+          inputId = 'admissionInput',
+          label = '',
+          choiceValues = c(
+            "er",
+            "gp",
+            "hospital_referral",
+            "other_umc",
+            "policlinic",
+            "other"
+          ),
+          choiceNames = c(
+            "ER",
+            "GP",
+            "Hospital referral",
+            "Other UMC",
+            "Policlinic",
+            "Other"
+          ),
+          selected = c(
+            "er",
+            "gp",
+            "hospital_referral",
+            "other_umc",
+            "policlinic",
+            "other"
+          )
+        )
+      )
+    ),
+    br(),
+    sidebarMenu(
+      menuItem(
+        "Specialty",
+        tabName = "specialty",
+        icon = icon("user-md"),
+        checkboxGroupInput(
+          inputId = 'specInput',
+          label = 'Specialty',
+          choices = c('Internal medicine', 'Surgery', 'Other'),
+          selected = c('Internal medicine', 'Surgery', 'Other')
+        )
+      )
+    ),
+    br(),
+    sidebarMenu(
+      menuItem(
+        "Exclude specialty",
+        tabName = "exclude",
+        icon = icon("exclamation-circle"),
+        selectInput(
+          inputId = "exInput",
+          label = "Exclude sub-specialty",
+          choices = levels(as.factor(set_multiple$specialty_detail)),
+          multiple = TRUE
+        )
+      )
+    ),
+    br(),
+    div(
+      style = "display:inline-block;width:32%;text-align: left;;",
+      actionButton(
+        inputId = "button1",
+        icon = icon("bar-chart-o"),
+        label = "GO!"
+      ),
+      style = "float: center"
+    ),
+    br(),
+    br(),
+    br(),
+    sidebarMenu(
+      menuItem(
+        "Download dataset",
+        tabName = "download",
+        icon = icon("download"),
+        textInput(
+          inputId = 'filename',
+          placeholder = "Name your file",
+          label = ''
+        ),
+        div(
+          style = "color: #CC0000;backgroud-color: #FFFFFF; display:inline-block;width:32%;text-align: left;;",
+          downloadButton(
+            outputId = "downloadData",
+            label = "Save!",
+            icon = icon("download"),
+            style = "float: center"
+          )
+        )
+      )
+    )
+  ),
+  dashboardBody(
+    tags$head(tags$style(
+      HTML(
+        '
+        .info-box {min-height: 55px; float: center}
+        .info-box-icon {height: 55px; line-height: 55px;}
+        .main-header
+        .logo {
+        font-family: "Helvetica Neue", sans-serif;
+        font-weight: bold;
+        letter-spacing:-1px;
+        font-size: 30px;
+        color: #CC0000;
+        background: "red"
+        }
+        .modal-dialog{ width:1000px}
+        .modal-body{ min-height:700px; align: center}
+        .modal-sm {
+        width: 1200px; align:center
+        }
+        .sidebar { height: 90vh; overflow-y: auto; }
+        '
+      )
+      )),
+    
+    fluidRow(
+      infoBoxOutput("bcInfoBox"),
+      infoBoxOutput("patInfoBox"),
+      infoBoxOutput("yearInfoBox")
+    ),
+    
+    fluidRow(
+      column(
+        width = 6,
+        uiOutput(outputId = "box1"),
+        uiOutput(outputId = "box2"),
+        uiOutput(outputId = "reg"),
+        br(),
+        br(),
+        uiOutput(outputId = "log_raw_box")
+      ),
+      
+      column(
+        width = 6,
+        uiOutput(outputId = "box3"),
+        uiOutput(outputId = "box4"),
+        uiOutput(outputId = "cox_box"),
+        br(),
+        br(),
+        uiOutput(outputId = "cox_box_raw")
+      )
+    )
+  )
+)
