@@ -1,17 +1,17 @@
-# `AMR` ![logo_radar](man/figures/radar.png)
+# `RadaR` ![logo_radar](man/figures/radar.png)
 RadaR is an application for intuitive, rapid and reproducible quality of care pattern analysis of infectious patients. 
 
 ## Prerequisites for using RadaR
 RadaR was built in [R](https://www.r-project.org) , an open source programming language using the [Shiny package](https://shiny.rstudio.com), a web application framework for R. Users will need to download R in order to use RadaR and we suggest the use of [RStudio](https://www.rstudio.com). R is completely free to use. 
 
-# Input type for RadaR's calculation
+## Input type for RadaR's calculation
 RadaR works with standard csv-files (.csv). The variables needed for RadaR are as follows:
 
 ![](man/figures/variables.png)
 
 Usually different data sources need to be merged for the desired result (at our institution three different sources: general data warehouse, pharmacy data, microbiology data). For an easy and rapid creating of the needed datasets that can be loaded into RadaR, an additional R-package will soon be available here in this github repository.
 
-## Authors
+## Author
 
 ![logo_uni](man/figures/logo_en.png)![logo_umcg](man/figures/logo_umcg.png)
 
