@@ -18,7 +18,7 @@ Usually different data sources need to be merged for the desired result (at our 
 RadaR was created at the Faculty of Medical Sciences of the [University of Groningen](https://www.rug.nl/) and the Medical Microbiology & Infection Prevention department of the University Medical Center Groningen (UMCG) by [Christian Luz](https://www.rug.nl/staff/c.f.luz/), PhD Student.
 
 ## Copyright
-[![License](https://img.shields.io/badge/Licence-GPL%20v3.0-orange.svg)
+![License](https://img.shields.io/badge/Licence-GPL%20v3.0-orange.svg)(https://github.com/ceefluz/radar/blob/master/LICENSE)
 
 RadaR is licensed under the [GNU General Public License (GPL) v3.0](https://github.com/ceefluz/radar/blob/master/LICENSE). In a nutshell, this means that this package:
 
