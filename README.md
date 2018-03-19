@@ -1,17 +1,41 @@
-<p style="line-height: 150%;"><span style="font-size: 14pt;"><strong><span style="line-height: 150%; font-family: Arial, sans-serif;">RadaR (Rapid analysis of diagnostic and antimicrobial patterns in R) &ndash; an interactive open source software tool </span></strong></span></p>
-                                                  <p style="text-align: justify; line-height: 150%;"><span style="font-size: 11pt;"><strong><span style="line-height: 150%; font-family: Arial, sans-serif;">&nbsp;</span></strong></span></p>
-                                                  <p style="text-align: justify; line-height: 150%;"><span style="font-size: 11pt;"><span style="font-family: "Arial",sans-serif;">Christian F. Luz<sup>1</sup>, Matthijs S. Berends<sup>1</sup>, Jan-Willem H. Dik<sup>1</sup>, Nienke Beerlage-de Jong<sup>2</sup>, Mari&euml;tte Lokate<sup>1</sup>, Corinna Glasner<sup>1</sup>, Bhanu Sinha<sup>1</sup> </span><span style="font-family: "Arial",sans-serif;">&nbsp;</span></span></p>
-                                                  <p style="text-align: justify; line-height: 150%;"><span style="font-size: 9pt; line-height: 150%; font-family: Arial, sans-serif;">1 Department of Medical Microbiology and Infection Prevention, University of Groningen, University Medical Center Groningen, Groningen, The Netherlands</span></p>
-                                                  <p style="text-align: justify; line-height: 150%;"><span style="font-size: 9pt; line-height: 150%; font-family: Arial, sans-serif;">2 Centre for eHealth and Wellbeing Research, Department of Psychology, Health and Technology, University of Twente, Enschede, The Netherlands</span></p>
-                                      
-<p style="text-align: justify; line-height: 150%;"><span style="font-size: 11pt;"><strong><span style="font-family: "Arial",sans-serif;">Background: </span></strong></span></p>
-                                                  <p style="text-align: justify; line-height: 150%;"><span style="font-family: Arial, sans-serif; font-size: 11pt;">Analysing outcome and quality of care indicators for infectious patients in an entire hospital requires processing large datasets, accounting for numerous patient parameters and treatment guidelines. Rapid, reproducible and adaptable analyses usually require substantial technical expertise. We describe a dashboard tool (RadaR) allowing user-friendly, intuitive and interactive analysis of large datasets without prior in-depth knowledge. This tool was developed for studying the effect of taking blood cultures on length of stay (LOS) and antibiotic consumption in patients receiving intravenous (IV) antibiotics at an academic tertiary referral hospital. RadaR handled a modelling dataset of more than 80,000 patients (eight years, 59 sub-specialties, 35 different antibiotic agents). </span></p>
-                                                  <p style="text-align: justify; line-height: 150%;"><span style="font-size: 11pt;"><strong><span style="font-family: "Arial",sans-serif;">Methods:</span></strong></span></p>
-                                                  <p style="text-align: justify; line-height: 150%;"><span style="font-family: Arial, sans-serif; font-size: 11pt;">RadaR was built in R (version 3.4.2), an open source programming language using Shiny package (version 1.0.5), a web application framework for R. Analytical graphs are generated with ggplot2 and survminer packages. The source code and additional required R packages for RadaR can be found at github.com/ceefluz/radar with a running example at ceefluz.shinyapps.io/radar. </span></p>
-                                                  <p style="text-align: justify; line-height: 150%;"><span style="font-size: 11pt;"><strong><span style="font-family: "Arial",sans-serif;">Results:</span></strong></span></p>
-                                                  <p style="text-align: justify; line-height: 150%;"><span style="font-size: 11pt;"><span style="font-family: "Arial",sans-serif;">RadaR visualizes analytical graphs in an interactive manner within seconds. Users can control different input variables: time of blood culture taken, study year, patient age, specialty, admission route and antibiotic agents. For a predefined grouping variable (e.g. blood cultures taken vs. not taken) in the selected patient population RadaR automatically </span><span style="font-family: "Arial",sans-serif; color: windowtext;">calculates the following: </span><span style="font-family: "Arial",sans-serif;">LOS distribution, animated LOS distribution over time, Kaplan-Meier estimates for hospital discharge, frequencies and ratios in antibiotic prescriptions, antibiotic consumption (in DDD) and mortality. Stratification can be done for (sub-)specialties, admission route, age, gender, admissions per quarter and antibiotic agent. Moreover, multiple logistic and Cox regression analysis in RadaR allows to investigate the grouping variable further. Finally, datasets of identified groups can easily be downloaded for further analysis.</span><span style="font-family: "Arial",sans-serif;">&nbsp;</span></span></p>
-                                                  <p style="text-align: justify; line-height: 150%;"><span style="font-size: 11pt;"><strong><span style="font-family: "Arial",sans-serif;">Conclusion: </span></strong></span></p>
-                                                  <p style="text-align: justify; line-height: 150%;"><span style="font-family: Arial, sans-serif; font-size: 11pt;">This tool enables intuitive, rapid and reproducible quality of care pattern analysis of infectious patients without prior software experience. Hence, it facilitates understanding and communication of important trends, performances and patient outcome. We have started using RadaR to investigate blood culture use at our institution. However, due to its open source nature this tool can be easily adapted to different objectives and settings.</span></p>
+# `AMR` ![logo_radar](man/figures/radar.png)
+RadaR is an application for intuitive, rapid and reproducible quality of care pattern analysis of infectious patients. 
 
+## Prerequisites for using RadaR
+RadaR was built in [R](https://www.r-project.org) , an open source programming language using the [Shiny package](https://shiny.rstudio.com), a web application framework for R. Users will need to download R in order to use RadaR and we suggest the use of [RStudio](https://www.rstudio.com). R is completely free to use. 
 
-                                           
+# Input type for RadaR's calculation
+RadaR works with standard csv-files (.csv). The variables needed for RadaR are as follows:
+
+![](man/figures/variables.png)
+
+Usually different data sources need to be merged for the desired result (at our institution three different sources: general data warehouse, pharmacy data, microbiology data). For an easy and rapid creating of the needed datasets that can be loaded into RadaR, an additional R-package will soon be available here in this github repository.
+
+## Authors
+
+![logo_uni](man/figures/logo_en.png)![logo_umcg](man/figures/logo_umcg.png)
+
+RadaR was created at the Faculty of Medical Sciences of the [University of Groningen](https://www.rug.nl/) and the Medical Microbiology & Infection Prevention department of the University Medical Center Groningen (UMCG) by [Christian Luz](https://www.rug.nl/staff/c.f.luz/), PhD Student.
+
+## Copyright
+[![License](https://img.shields.io/badge/Licence-GPL%20v3.0-orange.svg)
+
+RadaR is licensed under the [GNU General Public License (GPL) v3.0](https://github.com/ceefluz/radar/blob/master/LICENSE). In a nutshell, this means that this package:
+
+- May be used for commercial purposes
+
+- May be used for private purposes
+
+- May be modified, although:
+
+  - Modifications **must** be released under the same license when distributing the package
+  - Changes made to the code **must** be documented
+
+- May be distributed, although:
+
+  - Source code **must** be made available when the package is distributed
+  - A copy of the license and copyright notice **must** be included.
+
+- Comes with a LIMITATION of liability
+
+- Comes with NO warranty
