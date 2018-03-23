@@ -12,7 +12,7 @@ RadaR works with standard csv-files (.csv). The variables needed for RadaR are a
 
 ![](man/figures/variables.png)
 
-Usually different data sources need to be merged for the desired result (at our institution three different sources: general data warehouse, pharmacy data, microbiology data). For an easy and rapid creating of the needed datasets that can be loaded into RadaR, an additional R-package will soon be available here in this github repository.
+Usually different data sources need to be merged for the desired result (at our institution three different sources: general data warehouse, pharmacy data, microbiology data). For an easy and rapid creating process of the needed datasets that can be loaded into RadaR, an additional R-package will soon be available here in this github repository.
 
 ## Author
 
