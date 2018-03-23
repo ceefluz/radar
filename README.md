@@ -1,5 +1,6 @@
 # `RadaR` ![logo_radar](man/figures/radar.png)
-RadaR is an application for intuitive, rapid and reproducible quality of care pattern analysis of infectious patients. 
+RadaR is an application for intuitive, rapid and reproducible quality of care pattern analysis of infectious patients.
+See a running example [here](https://ceefluz.shinyapps.io/radar/).
 
 ## Prerequisites for using RadaR
 RadaR was built in [R](https://www.r-project.org) , an open source programming language using the [Shiny package](https://shiny.rstudio.com), a web application framework for R. Users will need to download R in order to use RadaR and we suggest the use of [RStudio](https://www.rstudio.com). R is completely free to use. 
