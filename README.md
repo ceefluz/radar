@@ -1,5 +1,7 @@
 # `RadaR` ![logo_radar](man/figures/radar.png)
 RadaR is an application for intuitive, rapid and reproducible quality of care pattern analysis of infectious patients.
+<br>
+<br>
 See a running example [here](https://ceefluz.shinyapps.io/radar/).
 
 ## Prerequisites for using RadaR
@@ -20,7 +22,6 @@ RadaR was created at the Faculty of Medical Sciences of the [University of Groni
 
 ## Copyright
 [![License](https://img.shields.io/badge/Licence-GPL%20v3.0-orange.svg)](https://github.com/ceefluz/radar/blob/master/LICENSE)
-
 RadaR is licensed under the [GNU General Public License (GPL) v3.0](https://github.com/ceefluz/radar/blob/master/LICENSE). In a nutshell, this means that this package:
 
 - May be used for commercial purposes
