@@ -1,6 +1,8 @@
 # `RadaR` ![logo_radar](man/figures/radar.png)
 RadaR is an application for intuitive, rapid and reproducible quality of care pattern analysis of infectious patients.
 <br>
+Preprint about RadaR available: https://doi.org/10.1101/347534
+<br>
 <br>
 See a running example [here](https://ceefluz.shinyapps.io/radar/).
 
