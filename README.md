@@ -13,7 +13,44 @@ RadaR was built in [R](https://www.r-project.org) , an open source programming l
 ## Input type for RadaR's calculation
 RadaR works with standard csv-files (.csv). The variables needed for RadaR are as follows:
 
-![](man/figures/variables.png)
+### Input variables for **RadaR**
+
+| Variable             	| Detail                                                                           	|
+|----------------------	|----------------------------------------------------------------------------------	|
+| ab_days              	| Duration of single prescription in days                                          	|
+| ab_days_all          	| Duration of overall antimicrobial treatment                                      	|
+| ab_first             	| First antimicrobial (TRUE/FALSE)                                                 	|
+| ab_group             	| Antimicrobial group according to ATC classification                              	|
+| ab_route             	| Route of administration                                                          	|
+| ab_start_all         	| Start of treatment (YYYY-MM-DD)                                                  	|
+| ab_start_date        	| Start of prescription (YYYY-MM-DD)                                               	|
+| ab_stop_all          	| Stop of treatment (YYYY-MM-DD)                                                   	|
+| ab_stop_date         	| End of prescription (YYYY-MM-DD)                                                 	|
+| ab_timing            	| Difference in days between start of admission and start of antimicrobial therapy 	|
+| ab_type              	| Name of antimicrobial                                                            	|
+| adm_end_date         	| End of admission (YYYY-MM-DD)                                                    	|
+| adm_route            	| Admitting department                                                             	|
+| adm_start_date       	| Start of admission (YYYY-MM-DD)                                                  	|
+| adm_weekday          	| Weekday (TRUE/FALSE)                                                             	|
+| age                  	| Patients' age                                                                    	|
+| atc_code             	| ATC code of antimicrobial                                                        	|
+| bc_date              	| Time of the first blood culture (YYYY-MM-DD)                                     	|
+| birth_date           	| Birth date (YYYY-MM-DD)                                                          	|
+| ddd_per_prescription 	| Defined daily dose per prescription                                              	|
+| ddd_sum              	| Defined daily dose for all antimicrobials per treatment                          	|
+| fullname             	| Microbiological test result (if available)                                       	|
+| gender               	| Gender                                                                           	|
+| id                   	| Patient ID or study ID                                                           	|
+| LOS                  	| Length of stay                                                                   	|
+| material             	| Microbiological test material                                                    	|
+| patient_death        	| Death during hospital stay (TRUE/FALSE)                                          	|
+| specialty            	| General specialty (Internal medicine, Surgery, Other)                            	|
+| sub_specialty        	| Subspecialty                                                                     	|
+| test_date            	| Microbiological test date                                                        	|
+| uc_date              	| Date of the first urine culture                                                  	|
+| uc_timing            	| Difference in days between start of antimicrobials and first urine culture       	|
+| year                 	| Year                                                                             	|
+| yearquarter          	| Year and quarter (YYYY-Q)                                                        	|
 
 Usually different data sources need to be merged for the desired result (at our institution three different sources: general data warehouse, pharmacy data, microbiology data). For an easy and rapid creating process of the needed datasets that can be loaded into RadaR, an additional R-package will soon be available here in this github repository.
 
