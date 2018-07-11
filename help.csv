@@ -1,0 +1,8 @@
+step;text
+1;Select the desired antimicrobials that are be administered during a specified timespan (Start of antimicrobials)
+2;Specify the patients' characteristics.
+3;Choose the years you want to analyse using the the slider. You can also drag the slider to move the selection in intervals.
+4;Specialties: By default all specialties and sub-specialties are selected but you can modify the inclusion: 1) Select sub-specialties with a minimum number of patients. 2) Exclude sub-specialties. 3) Include sub-specialties
+5;Select the route of admission.
+6;For analysing diagnostics choose the test from the dropdown menu in the diagnostics section and define the time to the first test.
+7;All changes in the selection criteria need to be confirmed by the clicking the confirm button.
