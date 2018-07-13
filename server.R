@@ -30,7 +30,7 @@ server <- function(input, output, session) {
     )
   })
   # base set with sidebar input: adminstration route, first prescription, antimicrobials, max use all, max use single
-  # Admitting department, year, specialty, sub-specialty (not excluded), age, gender,
+  # Admitting department, year, specialty, subspecialty (not excluded), age, gender,
   
   # Filtering the dataset based on the selection from the sidebar
   
@@ -61,11 +61,22 @@ server <- function(input, output, session) {
           (gender %in% input$genderInput) # select gender
         )
       
-      if (!is.null(input$inInput)) { # include sub-specialty selection only
+      if (!is.null(input$inInput)) { # include subspecialty selection only
         filter(set_base, sub_specialty %in% input$inInput)
       } else {
         set_base
       }
+      
+      # filter minimum number per subspecialty
+      
+      set_base_n <- set_base %>% 
+        distinct(id, .keep_all = TRUE) %>% 
+        group_by(sub_specialty) %>% 
+        summarise(n = n()) %>% 
+        filter(n >= input$nInput) 
+      
+      set_base <- set_base %>%
+        filter(sub_specialty %in% set_base_n$sub_specialty)
     })
   })
   
@@ -385,7 +396,7 @@ server <- function(input, output, session) {
         width = NULL,
         height = 320,
         tabPanel(
-          title = "Sub-specialties in selection",
+          title = "Subspecialties in selection",
           div(
             style = "position: absolute; left: 0.5em; bottom: 0.5em;",
             introBox(data.step = 5, data.intro = intro$text[5],
@@ -425,7 +436,7 @@ server <- function(input, output, session) {
         width = NULL,
         height = 400,
         tabPanel(
-          title = "Sub-specialties - table",
+          title = "Subspecialties - table",
           htmlOutput("patients_total"),
           withSpinner(
             DT::dataTableOutput("table_pat_all"),
@@ -645,7 +656,7 @@ server <- function(input, output, session) {
               radioGroupButtons(
                 inputId = "box2.1",
                 label = "Select group", 
-                choiceNames = c("Year", "Specialty", "Sub-specialty", "Admitting department"),
+                choiceNames = c("Year", "Specialty", "Subspecialty", "Admitting department"),
                 choiceValues = c("year", "specialty", "sub_specialty", "adm_route"), 
                 selected = "year", 
                 direction = "vertical"
@@ -734,7 +745,7 @@ server <- function(input, output, session) {
               radioGroupButtons(
                 inputId = "box3.1.0",
                 label = "Select group", 
-                choiceNames = c("Year", "Specialty", "Sub-specialty", "Admitting department"),
+                choiceNames = c("Year", "Specialty", "Subspecialty", "Admitting department"),
                 choiceValues = c("year", "specialty", "sub_specialty", "adm_route"), 
                 selected = "year", 
                 direction = "vertical"
@@ -823,7 +834,7 @@ server <- function(input, output, session) {
               radioGroupButtons(
                 inputId = "box4.0",
                 label = "Select group", 
-                choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Sub-specialty", "Admitting department"),
+                choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Subspecialty", "Admitting department"),
                 choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
                 selected = "ab_type", 
                 direction = "vertical"
@@ -1010,7 +1021,7 @@ server <- function(input, output, session) {
               radioGroupButtons(
                 inputId = "box7.1",
                 label = "Select group", 
-                choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Sub-specialty", "Admitting department"),
+                choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Subspecialty", "Admitting department"),
                 choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
                 selected = "year", 
                 direction = "vertical"
@@ -1051,7 +1062,7 @@ server <- function(input, output, session) {
               radioGroupButtons(
                 inputId = "box8.0",
                 label = "Select group", 
-                choiceNames = c("Antimicrobials", "Antimicrobial - Groups", "Year", "Specialty", "Sub-specialty", "Admitting department"),
+                choiceNames = c("Antimicrobials", "Antimicrobial - Groups", "Year", "Specialty", "Subspecialty", "Admitting department"),
                 choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
                 selected = "year", 
                 direction = "vertical"
@@ -1114,7 +1125,7 @@ server <- function(input, output, session) {
               radioGroupButtons(
                 inputId = "box8",
                 label = "Select group", 
-                choiceNames = c("All", "Antimicrobial - Groups", "Antimicrobials", "Year", "Gender", "Specialty", "Sub-specialty", "Admitting department"),
+                choiceNames = c("All", "Antimicrobial - Groups", "Antimicrobials", "Year", "Gender", "Specialty", "Subspecialty", "Admitting department"),
                 choiceValues = c("fullname", "ab_group", "ab_type", "year", "gender", "specialty", "sub_specialty", "adm_route"), 
                 selected = "fullname", 
                 direction = "vertical"
@@ -1228,7 +1239,7 @@ server <- function(input, output, session) {
               radioGroupButtons(
                 inputId = "box_los1",
                 label = "Select group", 
-                choiceNames = c("All", "Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Sub-specialty", "Admitting department"),
+                choiceNames = c("All", "Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Subspecialty", "Admitting department"),
                 choiceValues = c("1", "gender", "year", "ab_group", "ab_type", "check", "specialty", "sub_specialty", "adm_route"), 
                 selected = , 
                 direction = "vertical",
@@ -1335,7 +1346,7 @@ server <- function(input, output, session) {
       if(input$box_los1 == "gender"){y <- "Gender"}
       if(input$box_los1 == "year"){y <- "Year"}
       if(input$box_los1 == "specialty"){y <- "Specialty"}
-      if(input$box_los1 == "sub_specialty"){y <- "Sub-specialty"}
+      if(input$box_los1 == "sub_specialty"){y <- "Subspecialty"}
       if(input$box_los1 == "ab_group"){y <- "Antimicrobial - Groups"}
       if(input$box_los1 == "ab_type"){y <- "Antimicrobials"}
       if(input$box_los1 == "check"){y <- "Diagnostics"}
@@ -1364,7 +1375,7 @@ server <- function(input, output, session) {
               radioGroupButtons(
                 inputId = "box_los3",
                 label = "Select group", 
-                choiceNames = c("Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Sub-specialty", "Admitting department"),
+                choiceNames = c("Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Subspecialty", "Admitting department"),
                 choiceValues = c("gender", "year", "ab_group", "ab_type", "check", "specialty", "sub_specialty", "adm_route"), 
                 selected = "gender", 
                 direction = "vertical"
@@ -1441,9 +1452,9 @@ server <- function(input, output, session) {
       coord_cartesian(ylim = c(-2, 2)) +
       scale_size_area(max_size = 25) +
       guides(fill = FALSE, size = FALSE) +
-      labs(x = "Number of patients (use mouse to identify sub-specialties)") +
+      labs(x = "Number of patients (use mouse to identify subspecialties)") +
       scale_x_continuous(
-        name = "Number of patients (use mouse to identify sub-specialties)", 
+        name = "Number of patients (use mouse to identify subspecialties)", 
         trans = "log10", 
         breaks = c(1, 10, 100, 1000, 10000)) +
       scale_fill_radar() +
@@ -1481,7 +1492,7 @@ server <- function(input, output, session) {
       set_reac_1() %>% 
         count(sub_specialty) %>% 
         arrange(desc(n)) %>% 
-        rename("Sub-specialty" = sub_specialty),
+        rename("Subspecialty" = sub_specialty),
       options = list(
         dom = "ftpr",
         style = "bootstrap",
@@ -2199,7 +2210,7 @@ server <- function(input, output, session) {
       set_table <- set_table %>% rename("Specialty" = specialty)
     }
     if (input$box_los3 == "sub_specialty") {
-      set_table <- set_table %>% rename("Sub-specialty" = sub_specialty)
+      set_table <- set_table %>% rename("Subspecialty" = sub_specialty)
     }
     if (input$box_los3 == "adm_route") {
       set_table <- set_table %>% rename("Admitting department" = adm_route)
@@ -2263,7 +2274,7 @@ server <- function(input, output, session) {
       paste(input$filename, ".csv", sep = "")
     },
     content = function(file) {
-      write.csv(set_select(), file, row.names = FALSE)
+      write.csv(set_base(), file, row.names = FALSE)
     }
   )
   
@@ -2274,28 +2285,6 @@ server <- function(input, output, session) {
         paste(exportname, Sys.Date(), ".png", sep = "")
       },
       content = function(file) {
-        # set a size for width and height here. If you want to use pixels (ggsave only supports in, cm, mm):
-        # ggsave(...,
-        #        dpi = your_text_factor * 100,
-        #        width = width_pixels / dpi,
-        #        height = height_pixels / dpi,
-        #        units = "in")
-        #
-        # but maybe better would be to let them download PDF's in A4 or A5 format:
-        # a0_height <- sqrt(sqrt(2)) * 1000 # times 1000 is needed for millimeters.
-        # a1_height <- a0_height / sqrt(2)
-        # a2_height <- a1_height / sqrt(2)
-        # a3_height <- a2_height / sqrt(2)
-        # a4_height <- a3_height / sqrt(2)
-        # a5_height <- a4_height / sqrt(2)
-        # ... and the width is always height / sqrt(2). Don't you think our metric system is übercool??
-        # then use cairo_pdf:
-        # ggsave(filename = filename,
-        #        device = cairo_pdf,
-        #        width = x,
-        #        height = y,
-        #        units = 'mm',
-        #        plot = plot)
         ggsave(file, plot = plot, device = "png")
       }
     )
