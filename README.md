@@ -14,26 +14,6 @@ RadaR was built in [R](https://www.r-project.org) , an open source programming l
 RadaR works with standard csv-files (.csv). The variables needed for RadaR are as follows:
 
 ### Input variables for **RadaR**
-
-| Variable             	| Detail                                                                           	|
-|----------------------	|----------------------------------------------------------------------------------	|
-| ab_route             	| Route of administration                                                          	|
-| ab_start_date        	| Start of prescription (YYYY-MM-DD)                                               	|
-| ab_stop_date         	| End of prescription (YYYY-MM-DD)                                                 	|
-| adm_end_date         	| End of admission (YYYY-MM-DD)                                                    	|
-| adm_route            	| Admitting department                                                             	|
-| adm_start_date       	| Start of admission (YYYY-MM-DD)                                                  	|
-| atc_code             	| ATC code of antimicrobial                                                        	|
-| birth_date           	| Birth date (YYYY-MM-DD)                                                          	|
-| ddd_per_prescription 	| Defined daily dose per prescription                                              	|
-| gender               	| Gender                                                                           	|
-| id                   	| Patient ID or study ID                                                           	|
-| material             	| Microbiological test material                                                    	|
-| specialty            	| General specialty (Internal medicine, Surgery, Other)                            	|
-| sub_specialty        	| Subspecialty                                                                     	|
-| test_date            	| Microbiological test date                                                        	|
-
-### Input variables for **RadaR**
 #### Admission data
 | Variable             	| Detail                                                                           	|
 |----------------------	|----------------------------------------------------------------------------------	|
