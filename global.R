@@ -47,9 +47,9 @@ lapply(required_packages, require, character.only = TRUE)
 
 # DATA TRANSFORMATION AND NEW VARIABLES -----------------------------------
 
-admissions <- read_csv()
-antimicrobials <- read_csv()
-microbiology <- read_csv()
+admissions <- read_csv() # add path here
+antimicrobials <- read_csv() # add path here
+microbiology <- read_csv() # add path here
 
 admissions <- admissions %>%
   mutate(year = year(adm_start_date),
@@ -105,7 +105,7 @@ anti <- anti[
 micro <- micro[
   pat,
   on = .(id, test_date >= adm_start_date, test_date <= adm_end_date),
-  .(id, test_date = x.test_date, bc_number, adm_start_date, adm_end_date),
+  .(id, test_date = x.test_date, test_number, adm_start_date, adm_end_date),
   nomatch = 0L
   ]
 
