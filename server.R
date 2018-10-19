@@ -1,134 +1,122 @@
 
 server <- function(input, output, session) {
-  
-  
+
+
   # DEFINE SETS -------------------------------------------------
   
   # define whether diagnostics have been performed in selected interval
   set_select <- reactive({
     input$confirm
-    isolate(
-      if (input$diagnosticsInput == "bc_timing") {
-        set %>%
-          mutate(
-            check =
-              if_else(
-                bc_timing %in% c(min(input$checkInput):max(input$checkInput)),
-                "Taken", "Not taken"
-              )
-          )
-      }
-      else {
-        set %>%
-          mutate(
-            check =
-              if_else(uc_timing %in% c(min(input$checkInput):max(input$checkInput)),
-                      "Taken", "Not taken"
-              )
-          )
-      }
-    )
+    isolate(if (input$diagnosticsInput == "bc_timing") {
+      antimicrobials %>%
+        mutate(check =
+                 if_else(test_timing %in% c(
+                   min(input$checkInput):max(input$checkInput)
+                 ),
+                 "Taken", "Not taken"))
+    }
+    else {
+      antimicrobials %>%
+        mutate(check =
+                 if_else(uc_timing %in% c(
+                   min(input$checkInput):max(input$checkInput)
+                 ),
+                 "Taken", "Not taken"))
+    })
   })
+  
   # base set with sidebar input: adminstration route, first prescription, antimicrobials, max use all, max use single
   # Admitting department, year, specialty, subspecialty (not excluded), age, gender,
-  
+
   # Filtering the dataset based on the selection from the sidebar
-  
+
   set_base <- reactive({
     input$confirm # confirm buttons needs to be pressed to initiate this code
     isolate({
       set_base <- set_select() %>%
         filter(
-          (ab_route %in% input$adminInput & # route of intake: IV, oral or both
-             ab_first %in% c(input$firstInput, TRUE) & # select first prescriptions or all
-             ab_timing %in% min(input$ab_timingInput):max(input$ab_timingInput) & # time interval of treatment start
-             ab_type %in% input$abInput) & # select antimicrobials
-            ab_days %in% if (input$ab_any_singleInput == TRUE) { # treatment duration of ...
+          ab_route %in% input$adminInput, # route of intake: IV, oral or both
+          ab_first %in% c(input$firstInput, TRUE), # select first prescriptions or all
+          ab_timing %in% min(input$ab_timingInput):max(input$ab_timingInput), # time interval of treatment start
+          ab_type %in% input$abInput, # select antimicrobials
+          ab_days %in% if (input$ab_any_singleInput == TRUE) { # treatment duration of ...
               input$ab_singleInput # ... single antimicrobial
             } else {
               c(1:max(input$ab_singleInput)) # if all antimicrobials selected
-            } &
-            ab_days_all %in% if (input$ab_any_allInput == TRUE) {
+            } & ab_days_all %in% if (input$ab_any_allInput == TRUE) {
               input$ab_allInput # entire treatment course
             } else {
               c(1:max(input$ab_allInput))
             },
-          (adm_route %in% input$admissionInput), # admitting department
-          (year %in% c(min(input$yearInput):max(input$yearInput))), # years selected
-          (specialty %in% input$specInput), # specialty groups (surgery, ...)
-          (!(sub_specialty %in% input$exInput)), # exclude single specialties
-          (age %in% min(input$ageInput):max(input$ageInput)), # select age
-          (gender %in% input$genderInput) # select gender
+          adm_route %in% input$admissionInput, # admitting department
+          year %in% c(min(input$yearInput):max(input$yearInput)), # years selected
+          specialty %in% input$specInput, # specialty groups (surgery, ...)
+          !(sub_specialty %in% input$exInput), # exclude single specialties
+          age %in% min(input$ageInput):max(input$ageInput), # select age
+          gender %in% input$genderInput # select gender
         )
-      
-      if (!is.null(input$inInput)) { # include subspecialty selection only
+
+      if (!is.null(input$inInput)) {
+        # include subspecialty selection only
         filter(set_base, sub_specialty %in% input$inInput)
       } else {
         set_base
       }
-      
+
       # filter minimum number per subspecialty
-      
-      set_base_n <- set_base %>% 
-        distinct(id, .keep_all = TRUE) %>% 
-        group_by(sub_specialty) %>% 
-        summarise(n = n()) %>% 
-        filter(n >= input$nInput) 
-      
+
+      set_base_n <- set_base %>%
+        distinct(id, .keep_all = TRUE) %>%
+        group_by(sub_specialty) %>%
+        summarise(n = n()) %>%
+        filter(n >= input$nInput)
+
       set_base <- set_base %>%
         filter(sub_specialty %in% set_base_n$sub_specialty)
     })
   })
   
+  test_results <- reactive({
+    input$confirm
+    isolate(
+      microbiology %>% semi_join(set_base(), by = c("id"))
+    )
+  })
+
   # set_1 for
   set_reac_1 <- reactive({
     input$confirm
     isolate(
-      set_base() %>%
-        distinct(id, .keep_all = TRUE)
+    set_base() %>%
+      distinct(id, .keep_all = TRUE)
     )
   })
-  
+
   set_reac_2 <- reactive({
     input$confirm
     isolate(
-      set_base()
+    set_base()
     )
   })
-  
-  set_ab <- reactive({
-    input$confirm
-    isolate(
-      set_reac_2() %>%
-        group_by(ab_type) %>%
-        count(ab_type)
-    )
-  })
-  set_ab_group <- reactive({
-    input$confirm
-    isolate(
-      set_reac_2() %>%
-        group_by(ab_group) %>%
-        count(ab_group)
-    )
-  })
-  
-  
-  
+
+
+
+
   # UI - GENERAL --------------------------------------------------------------
+
   
-  
-  # show intro modal
+  show intro modal
   observeEvent("", {
     showModal(modalDialog(
       includeHTML("intro_text.html"),
       easyClose = TRUE,
       footer = tagList(
-        actionButton(inputId = "intro", label = "INTRODUCTION TOUR", icon = icon("info-circle"))
+         actionButton(inputId = "intro", label = "INTRODUCTION TOUR", icon = icon("info-circle"))
       )
     ))
   })
-  observeEvent(input$intro,{ 
+
+  observeEvent(input$intro,{
     removeModal()
   })
   
@@ -138,16 +126,16 @@ server <- function(input, output, session) {
                                                "prevLabel" = "Previous",
                                                "doneLabel" = "Alright. Let's go"))
   )
-  
+
   # use action buttons as tab selectors
   update_all <- function(x) {
     updateSelectInput(session, "tab",
-                      choices = c("", "Patients", "Antimicrobial consumption", "Diagnostics", "Outcome"),
-                      label = "",
-                      selected = x
+      choices = c("", "Patients", "Antimicrobial consumption", "Diagnostics", "Outcome"),
+      label = "",
+      selected = x
     )
   }
-  
+
   observeEvent(input$patients, {
     update_all("Patients")
   })
@@ -171,12 +159,12 @@ server <- function(input, output, session) {
       icon = icon("bar-chart-o"), 
       style = "primary")
   })
-  
+
   # hide the underlying selectInput in sidebar for better design
   observeEvent("", {
     hide("tab")
   })
-  
+
   # update all/none group in sidebar and antimicrobials by group
   observe({
     x <- input$allInput
@@ -186,7 +174,7 @@ server <- function(input, output, session) {
     else {
       x <- character(0) 
     }
-    
+
     updateCheckboxGroupInput(
       session,
       "abGroupInput",
@@ -216,55 +204,55 @@ server <- function(input, output, session) {
   })
   
   # gray out slider input when input "any" in antimicrobial selection
-  observeEvent(input$ab_any_allInput, {
-    if (input$ab_any_allInput == FALSE) {
-      disable("ab_allInput")
-      updateSliderInput(session,
-                        inputId = "ab_allInput",
-                        label = NULL,
-                        value = max(set$ab_days_all, na.rm = TRUE),
-                        min = 0,
-                        max = max(set$ab_days_all, na.rm = TRUE),
-                        step = 1
-      )
-    } else {
-      enable("ab_allInput")
-      updateSliderInput(session,
-                        inputId = "ab_allInput",
-                        label = NULL,
-                        value = 2,
-                        min = 0,
-                        max = max(set$ab_days_all, na.rm = TRUE),
-                        step = 1
-      )
-    }
-  })
-  
-  observeEvent(input$ab_any_singleInput, {
-    if (input$ab_any_singleInput == FALSE) {
-      disable("ab_singleInput")
-      updateSliderInput(session, 
-                        inputId = "ab_singleInput",
-                        label = NULL, 
-                        value = max(set$ab_days_all, na.rm = TRUE),
-                        min = 0, 
-                        max = max(set$ab_days_all, na.rm = TRUE), 
-                        step = 1
-      )
-    } else {
-      enable("ab_singleInput")
-      updateSliderInput(session, 
-                        inputId = "ab_singleInput",
-                        label = NULL, 
-                        value = 2,
-                        min = 0, 
-                        max = max(set$ab_days_all, na.rm = TRUE), 
-                        step = 1 
-      )
-    }
-  })
-  
-  
+observeEvent(input$ab_any_allInput, {
+  if (input$ab_any_allInput == FALSE) {
+    disable("ab_allInput")
+    updateSliderInput(session,
+      inputId = "ab_allInput",
+      label = NULL,
+      value = max(antimicrobials$ab_days_all, na.rm = TRUE),
+      min = 0,
+      max = max(antimicrobials$ab_days_all, na.rm = TRUE),
+      step = 1
+    )
+  } else {
+    enable("ab_allInput")
+    updateSliderInput(session,
+      inputId = "ab_allInput",
+      label = NULL,
+      value = 2,
+      min = 0,
+      max = max(antimicrobials$ab_days_all, na.rm = TRUE),
+      step = 1
+    )
+  }
+})
+
+observeEvent(input$ab_any_singleInput, {
+  if (input$ab_any_singleInput == FALSE) {
+    disable("ab_singleInput")
+    updateSliderInput(session, 
+                      inputId = "ab_singleInput",
+      label = NULL, 
+      value = max(antimicrobials$ab_days_all, na.rm = TRUE),
+      min = 0, 
+      max = max(antimicrobials$ab_days_all, na.rm = TRUE), 
+      step = 1
+    )
+  } else {
+    enable("ab_singleInput")
+    updateSliderInput(session, 
+                      inputId = "ab_singleInput",
+      label = NULL, 
+      value = 2,
+      min = 0, 
+      max = max(antimicrobials$ab_days_all, na.rm = TRUE), 
+      step = 1 
+    )
+  }
+})
+
+
   # DYNAMIC RENDER RULES ----------------------------------------------------
   
   observeEvent("", {
@@ -272,8 +260,6 @@ server <- function(input, output, session) {
     hide("antimicrobials_panel")
     hide("diagnostics_panel")
     hide("outcome_panel")
-    hide("box_log_advanced")
-    hide("box_cox_advanced")
   }, once = TRUE)
   
   observeEvent(input$patients, {
@@ -281,341 +267,295 @@ server <- function(input, output, session) {
     hide("diagnostics_panel")
     hide("antimicrobials_panel")
     hide("outcome_panel")
-    hide("box_log_advanced")
-    hide("box_cox_advanced")
   })
   observeEvent(input$antimicrobials, {
     show("antimicrobials_panel")
     hide("diagnostics_panel")
     hide("outcome_panel")
     hide("patients_panel")
-    hide("box_log_advanced")
-    hide("box_cox_advanced")
   })
   observeEvent(input$diagnostics, {
     show("diagnostics_panel")
     hide("antimicrobials_panel")
     hide("outcome_panel")
     hide("patients_panel")
-    hide("box_log_advanced")
-    hide("box_cox_advanced")
   })
   observeEvent(input$outcome, {
     show("outcome_panel")
     hide("diagnostics_panel")
     hide("antimicrobials_panel")
     hide("patients_panel")
-    hide("box_log_advanced")
-    hide("box_cox_advanced")
-  })
-  observeEvent(input$tab2, {
-    if (input$tab2 == "Logistic regression analysis" & input$diagnostics == TRUE) {
-      show("box_log_advanced")
-      hide("antimicrobial_panel")
-      hide("diagnostics_panel")
-      hide("outcome_panel")
-      hide("patients_panel")
-      hide("box_cox_advanced")
-    }
-  })
-  observeEvent(input$tab3, {
-    if (input$tab3 == "Cox regression analysis" & input$outcome == TRUE) {
-      show("box_cox_advanced")
-      hide("antimicrobial_panel")
-      hide("diagnostics_panel")
-      hide("outcome_panel")
-      hide("patients_panel")
-      hide("box_log_advanced")
-    }
-  })
-  
-  observeEvent({
-    input$patients
-    input$antimicrobials
-    input$diagnostics
-    input$outcome
-  }, {
-    updateSelectInput(
-      session,
-      "tab2",
-      choices = c("-", "Logistic regression analysis"),
-      label = "CHOOSE OPTIONS",
-      selected = "-"
-    )
-    updateSelectInput(
-      session,
-      "tab3",
-      choices = c("-", "Cox regression analysis"),
-      label = "CHOOSE OPTIONS",
-      selected = "-"
-    )
   })
   
   
   # show active button with color
-  
-  observeEvent(input$tab, {
-    x <- input$tab
-    updateButton(session, "patients", style = {
-      if (x == "Patients") {
-        paste("warning")
-      } else {
-        paste("success")
-      }
-    })
-    updateButton(session, "antimicrobials", style = {
-      if (x == "Antimicrobial consumption") {
-        paste("warning")
-      } else {
-        paste("success")
-      }
-    })
-    updateButton(session, "diagnostics", style = {
-      if (x == "Diagnostics") {
-        paste("warning")
-      } else {
-        paste("success")
-      }
-    })
-    updateButton(session, "outcome", style = {
-      if (x == "Outcome") {
-        paste("warning")
-      } else {
-        paste("success")
-      }
-    })
+
+observeEvent(input$tab, {
+  x <- input$tab
+  updateButton(session, "patients", style = {
+    if (x == "Patients") {
+      paste("warning")
+    } else {
+      paste("success")
+    }
   })
-  
+  updateButton(session, "antimicrobials", style = {
+    if (x == "Antimicrobial consumption") {
+      paste("warning")
+    } else {
+      paste("success")
+    }
+  })
+  updateButton(session, "diagnostics", style = {
+    if (x == "Diagnostics") {
+      paste("warning")
+    } else {
+      paste("success")
+    }
+  })
+  updateButton(session, "outcome", style = {
+    if (x == "Outcome") {
+      paste("warning")
+    } else {
+      paste("success")
+    }
+  })
+})
+
   # UI - PATIENTS - 1 ----------------------------------------------------------
-  
+
   output$box_pat <- renderUI({
-    div(
-      style = "position: relative; backgroundColor: #ecf0f5",
-      tabBox(
-        id = "box_pat",
-        width = NULL,
-        height = 320,
-        tabPanel(
-          title = "Subspecialties in selection",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            introBox(data.step = 5, data.intro = intro$text[5],
-                     dropdown(
-                       radioGroupButtons(
-                         inputId = "box_pat1",
-                         label = NULL, 
-                         choices = c("Show all", "Show top 10 only"), 
-                         selected = "Show all", 
-                         direction = "vertical"
-                       ),
-                       size = "xs",
-                       icon = icon("gear", class = "opt"), 
-                       up = TRUE
-                     )
+      div(
+        style = "position: relative; backgroundColor: #ecf0f5",
+        tabBox(
+          id = "box_pat",
+          width = NULL,
+          height = 320,
+          tabPanel(
+            title = "Subspecialties in selection",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              introBox(data.step = 5, data.intro = intro$text[5],
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box_pat1",
+                  label = NULL, 
+                  choices = c("Show all", "Show top 10 only"), 
+                  selected = "Show all", 
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
             )
-          ),
-          withSpinner(
-            plotlyOutput("plot_pat_select", height = 230),
-            type = 4,
-            color = radar_colors["red"], 
-            size = 0.7 
+            ),
+            withSpinner(
+              plotlyOutput("plot_pat_select", height = 230),
+              type = 4,
+              color = "#d33724", 
+              size = 0.7 
+            )
           )
         )
       )
-    )
   })
-  
-  
+
+
   # UI - PATIENTS - 2 -------------------------------------------------------
-  
+
   output$box_pat2 <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box_pat2",
-        width = NULL,
-        height = 400,
-        tabPanel(
-          title = "Subspecialties - table",
-          htmlOutput("patients_total"),
-          withSpinner(
-            DT::dataTableOutput("table_pat_all"),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
-          )
-        ),
-        tabPanel(
-          title = "Patient age",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_pat1.1",
-                label = "Select group", 
-                choiceNames = c("All", "Gender"),
-                choiceValues = c("all", "gender"), 
-                selected = "all", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box_pat2",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "Subspecialties - table",
+            htmlOutput("patients_total"),
+            withSpinner(
+              DT::dataTableOutput("table_pat_all"),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
             )
           ),
-          div(
-            style = "position: absolute; left: 4em; bottom: 0.5em;",
-            dropdown(
-              downloadButton(outputId = "down_age_select", label = "Download plot"),
-              size = "xs",
-              icon = icon("download", class = "opt"), 
-              up = TRUE
+          tabPanel(
+            title = "Patient age",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box_pat1.1",
+                  label = "Select group", 
+                  choiceNames = c("All", "Gender"),
+                  choiceValues = c("all", "gender"), 
+                  selected = "all", 
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            div(
+              style = "position: absolute; left: 4em; bottom: 0.5em;",
+              dropdown(
+                downloadButton(outputId = "down_age_select", label = "Download plot"),
+                size = "xs",
+                icon = icon("download", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              plotOutput("plot_age_select", height = 300),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
             )
-          ),
-          withSpinner(
-            plotOutput("plot_age_select", height = 300),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
           )
         )
       )
-    )
   })
-  
+
   output$patients_total <- renderText({
-    HTML(paste("Total number of patients:", strong(n_distinct(set_reac_1()$id))))
+    HTML(
+      paste("Total number of admissions:", 
+            strong(
+              unique(
+                paste(set_reac_1()$id) %>% 
+                  length()
+              )
+            )
+            )
+      )
   })
-  
-  
-  
+
+
+
   # UI - PATIENTS - 3 -------------------------------------------------------
-  
+
   output$box_year <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box_year",
-        width = NULL,
-        height = 400,
-        tabPanel(
-          title = "Number of patients per year",
-          div(
-            style = "position: absolute; left:0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_year1",
-                label = "Select group", 
-                choiceNames = c("All", "Gender"),
-                choiceValues = c("NULL", "gender"), 
-                selected = "all", 
-                direction = "vertical"
-              ),
-              radioGroupButtons(
-                inputId = "box_year2",
-                label = "Change plot", 
-                choices = c("Count", "Proportion"), 
-                selected = "Count", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box_year",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "Number of patients per year",
+            div(
+              style = "position: absolute; left:0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box_year1",
+                  label = "Select time period", 
+                  choiceNames = c("Years", "Quarter", "Months"),
+                  choiceValues = c("years", "yearquarter_adm", "yearmonth_adm"), 
+                  selected = "years", 
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            div(
+              style = "position: absolute; left: 4em; bottom: 0.5em;",
+              dropdown( 
+                downloadButton(outputId = "down_year_select", label = "Download plot"),
+                size = "xs",
+                icon = icon("download", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              plotOutput("plot_year_select", height = 300),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
             )
-          ),
-          div(
-            style = "position: absolute; left: 4em; bottom: 0.5em;",
-            dropdown( 
-              downloadButton(outputId = "down_year_select", label = "Download plot"),
-              size = "xs",
-              icon = icon("download", class = "opt"), 
-              up = TRUE
-            )
-          ),
-          withSpinner(
-            plotOutput("plot_year_select", height = 300),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
           )
         )
       )
-    )
   })
-  
-  
-  
+
+
+
   # UI - AB - 1 ------------------------------------------------------------------
   output$box1 <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box1",
-        width = NULL,
-        height = 400,
-        tabPanel(
-          title = "Antimicrobials",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box1.0",
-                label = "Choose groups", 
-                choiceNames = c("Antimicrobial - Groups", "Antimicrobials"), 
-                choiceValues = c("ab_group", "ab_type"), 
-                direction = "vertical"
-              ),
-              radioGroupButtons(
-                inputId = "box1.1",
-                label = "Show", 
-                choices = c("Prescriptions", "DDD per 100 bed days", "DOT per 100 bed days"), 
-                selected = "Prescriptions", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box1",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "Antimicrobials",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box1.0",
+                  label = "Choose groups", 
+                  choiceNames = c("Antimicrobial - Groups", "Antimicrobials"), 
+                  choiceValues = c("ab_group", "ab_type"), 
+                  direction = "vertical"
+                ),
+                radioGroupButtons(
+                  inputId = "box1.1",
+                  label = "Show", 
+                  choiceNames = c("Prescriptions", "DDD per 100 bed days", "DOT per 100 bed days"),
+                  choiceValues = c("prescriptions", "DDD_100", "DOT_100"),
+                  selected = "prescriptions", 
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              plotOutput("plot_ab", height = 300),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
             )
           ),
-          withSpinner(
-            plotOutput("plot_ab", height = 300),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
-          )
-        ),
-        div(
-          style = "position: absolute; right: 0.5em; bottom: 0.5em;",
-          conditionalPanel(
-            "input.box1 == 'Antimicrobials'",
-            actionBttn(
-              inputId = "ab",
-              icon = icon("search-plus", class = "opt"),
-              style = "fill",
-              color = "danger",
-              size = "xs"
+          div(
+            style = "position: absolute; right: 0.5em; bottom: 0.5em;",
+            conditionalPanel(
+              "input.box1 == 'Antimicrobials'",
+              actionBttn(
+                inputId = "ab",
+                icon = icon("search-plus", class = "opt"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
             )
-          )
-        ),
-        div(
-          style = "position: absolute; left: 4em; bottom: 0.5em;",
-          dropdown(
-            downloadButton(outputId = "down_box_1", label = "Download plot"),
-            size = "xs",
-            icon = icon("download", class = "opt"), 
-            up = TRUE
+          ),
+          div(
+            style = "position: absolute; left: 4em; bottom: 0.5em;",
+            dropdown(
+              downloadButton(outputId = "down_box_1", label = "Download plot"),
+              size = "xs",
+              icon = icon("download", class = "opt"), 
+              up = TRUE
+            )
           )
         )
       )
-    )
   })
-  
+
   observeEvent((input$ab), {
     showModal(modalDialog(
       renderPlot({
         plot_ab() + theme(
-          axis.title = element_text(size = 26),
-          text = element_text(size = 20)
+          axis.title = element_text(size = 20),
+          text = element_text(size = 20),
+          plot.title = element_text(size = 26)
         )
       }, height = 600),
       easyClose = TRUE,
@@ -623,24 +563,10 @@ server <- function(input, output, session) {
       footer = NULL
     ))
   })
-  
-  observeEvent((input$ab_los), {
-    showModal(modalDialog(
-      renderPlot({
-        plot_ab_los() + theme(
-          axis.title = element_text(size = 26),
-          text = element_text(size = 20)
-        )
-      }, height = 600),
-      easyClose = TRUE,
-      size = "l",
-      footer = NULL
-    ))
-  })
-  
-  
+
+
   # UI - AB - 2 -------------------------------------------------------------
-  
+
   output$box2 <- renderUI({
     div(
       style = "position: relative",
@@ -654,25 +580,19 @@ server <- function(input, output, session) {
             style = "position: absolute; left: 0.5em; bottom: 0.5em;",
             dropdown(
               radioGroupButtons(
-                inputId = "box2.1",
-                label = "Select group", 
-                choiceNames = c("Year", "Specialty", "Subspecialty", "Admitting department"),
-                choiceValues = c("year", "specialty", "sub_specialty", "adm_route"), 
-                selected = "year", 
-                direction = "vertical"
-              ),
-              radioGroupButtons(
-                inputId = "box2.0",
-                label = "Outliers", 
-                choices = c("Top 3", "No outliers"), 
-                selected = "No outliers", 
-                direction = "vertical"
-              ),
-              radioGroupButtons(
                 inputId = "box2.2",
-                label = "Labels", 
-                choices = c("Show labels", "No labels"), 
-                selected = "No labels", 
+                label = "Select time", 
+                choiceNames = c("per year", "per month", "per quarter"),
+                choiceValues = c("year", "yearmonth_adm", "yearquarter_adm"), 
+                selected = "yearmonth_adm", 
+                direction = "vertical"
+              ),
+              radioGroupButtons(
+                inputId = "box2.3",
+                label = "Select grouping", 
+                choiceNames = c("None", "Specialty", "Sub-specialty", "Admitting department"),
+                choiceValues = c("none", "specialty", "sub_specialty", "adm_route"),
+                selected = "none",
                 direction = "vertical"
               ),
               size = "xs",
@@ -683,14 +603,14 @@ server <- function(input, output, session) {
           div(
             style = "position: absolute; left: 4em; bottom: 0.5em;",
             dropdown(
-              downloadButton(outputId = "down_box_2", label = "Download plot"),
+              downloadButton(outputId = "down_box_ddd_ts", label = "Download plot"),
               size = "xs",
               icon = icon("download", class = "opt"), 
               up = TRUE
             )
           ),
           withSpinner(
-            plotOutput("plot_DDD_all", height = 300),
+            plotOutput("ddd_ts", height = 300),
             type = 4,
             color = "#CC0000",
             size = 0.7
@@ -712,13 +632,14 @@ server <- function(input, output, session) {
       )
     )
   })
-  
+
   observeEvent((input$ddd), {
     showModal(modalDialog(
       renderPlot({
-        plot_DDD_all() + theme(
-          axis.title = element_text(size = 26),
-          text = element_text(size = 20)
+        ddd_ts() + theme(
+          axis.title = element_text(size = 20),
+          text = element_text(size = 20),
+          plot.title = element_text(size = 26)
         )
       }, height = 600),
       easyClose = TRUE,
@@ -726,88 +647,84 @@ server <- function(input, output, session) {
       footer = NULL
     ))
   })
-  
-  
+
+
+
   # UI - AB - 3 --------------------------------------------------------------
-  
+
   output$box3 <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box3",
-        width = NULL,
-        height = 400,
-        tabPanel(
-          title = "Days of therapy (DOT)",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box3.1.0",
-                label = "Select group", 
-                choiceNames = c("Year", "Specialty", "Subspecialty", "Admitting department"),
-                choiceValues = c("year", "specialty", "sub_specialty", "adm_route"), 
-                selected = "year", 
-                direction = "vertical"
-              ),
-              radioGroupButtons(
-                inputId = "box3.1.1",
-                label = "Outliers", 
-                choices = c("Top 3", "No outliers"), 
-                selected = "No outliers", 
-                direction = "vertical"
-              ),
-              radioGroupButtons(
-                inputId = "box3.1.2",
-                label = "Labels", 
-                choices = c("Show labels", "No labels"), 
-                selected = "No labels", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box3",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "Days of therapy (DOT)",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box3.2",
+                  label = "Select time", 
+                  choiceNames = c("per year", "per month", "per quarter"),
+                  choiceValues = c("year", "yearmonth_adm", "yearquarter_adm"), 
+                  selected = "yearmonth_adm", 
+                  direction = "vertical"
+                ),
+                radioGroupButtons(
+                  inputId = "box3.3",
+                  label = "Select grouping", 
+                  choiceNames = c("None", "Specialty", "Sub-specialty", "Admitting department"),
+                  choiceValues = c("NULL", "specialty", "sub_specialty", "adm_route"),
+                  selected = "NULL",
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            div(
+              style = "position: absolute; left: 4em; bottom: 0.5em;",
+              dropdown(
+                downloadButton(outputId = "down_box_dot_ts", label = "Download plot"),
+                size = "xs",
+                icon = icon("download", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              plotOutput("dot_ts", height = 300),
+              type = 4,
+              color = "#CC0000",
+              size = 0.7
             )
           ),
           div(
-            style = "position: absolute;left: 4em; bottom: 0.5em;",
-            dropdown(
-              downloadButton(outputId = "down_box_3", label = "Download plot"),
-              size = "xs",
-              icon = icon("download", class = "opt"), 
-              up = TRUE
-            )
-          ),
-          withSpinner(
-            plotOutput("plot_DOT_all", height = 300),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
-          )
-        ),
-        div(
-          style = "position: absolute; right: 0.5em; bottom: 0.5em",
-          conditionalPanel(
-            "input.box3 == 'Days of therapy (DOT)'",
-            actionBttn(
-              inputId = "days",
-              icon = icon("search-plus", class = "opt"),
-              style = "fill",
-              color = "danger",
-              size = "xs"
+            style = "position: absolute; right: 0.5em; bottom: 0.5em",
+            conditionalPanel(
+              "input.box3 == 'Days of therapy (DOT)'",
+              actionBttn(
+                inputId = "days",
+                icon = icon("search-plus", class = "opt"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
             )
           )
         )
       )
-    )
   })
-  
+
   observeEvent((input$days), {
     showModal(modalDialog(
       renderPlot({
-        plot_DOT_all() + theme(
-          axis.title = element_text(size = 26),
-          text = element_text(size = 20)
+        dot_ts() + theme(
+          axis.title = element_text(size = 20),
+          text = element_text(size = 20),
+          plot.title = element_text(size = 26)
         )
       }, height = 600),
       easyClose = TRUE,
@@ -815,185 +732,176 @@ server <- function(input, output, session) {
       footer = NULL
     ))
   })
-  
-  
+
+
+
   # UI - AB - 4 -----------------------------------------------------------
-  
+
   output$box4 <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box4",
-        width = NULL,
-        height = 400,
-        tabPanel(
-          title = "DDD/DOT table",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box4.0",
-                label = "Select group", 
-                choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Subspecialty", "Admitting department"),
-                choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
-                selected = "ab_type", 
-                direction = "vertical"
-              ),
-              radioGroupButtons(
-                inputId = "box4.1",
-                label = "Select group", 
-                choices = c("DDD per 100 bed days", "DOT per 100 bed days"), 
-                selected = "DDD per 100 bed days", direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box4",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "DDD / DOT table",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box4.0",
+                  label = "Select group", 
+                  choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
+                  selected = "ab_type", 
+                  direction = "vertical"
+                ),
+                radioGroupButtons(
+                  inputId = "box4.1",
+                  label = "Select group", 
+                  choices = c("DDD per 100 bed days", "DOT per 100 bed days"), 
+                  selected = "DDD per 100 bed days", 
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              DT::dataTableOutput("table_ab"),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
             )
-          ),
-          withSpinner(
-            DT::dataTableOutput("table_ab"),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
           )
         )
       )
-    )
   })
-  
-  
+
+
   # UI - DIAGNOSTICS - 1 ------------------------------------------------------------------
-  
+
   output$box5 <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box5",
-        width = NULL,
-        height = 400,
-        tabPanel(
-          title = "Diagnostics in selected patients",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box5.1",
-                label = "Change time", 
-                choiceNames = c("Year", "Quarter"), 
-                choiceValues = c("year", "yearquarter"), 
-                selected = "year", 
-                direction = "vertical"
-              ),
-              radioGroupButtons(
-                inputId = "box5.2",
-                label = "Change plot", 
-                choiceNames = c("Count", "Proportion"), 
-                choiceValues = c("dodge", "fill"), 
-                selected = "dodge", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box5",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "Diagnostics in selected patients",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box5.1",
+                  label = "Change time", 
+                  choiceNames = c("Year", "Quarter", "Month"), 
+                  choiceValues = c("year", "yearquarter_adm", "yearmonth_adm"), 
+                  selected = "year", 
+                  direction = "vertical"
+                ),
+                radioGroupButtons(
+                  inputId = "box5.2",
+                  label = "Change plot", 
+                  choiceNames = c("Count", "Proportion"), 
+                  choiceValues = c("dodge", "fill"), 
+                  selected = "dodge", 
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            div(
+              style = "position: absolute; left: 4em;bottom: 0.5em;",
+              dropdown(
+                downloadButton(outputId = "down_box_5", label = "Download plot"),
+                size = "xs",
+                icon = icon("download", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              plotOutput("plot_dia_adm", height = 300),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "Timing of selected diagnostics",
+            div(
+              style = "position:absolute;left:0.5em;bottom: 0.5em;",
+              dropdown(
+                downloadButton(outputId = "down_box_6", label = "Download plot"),
+                size = "xs",
+                icon = icon("download", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              plotOutput("plot_dia_timing", height = 300),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
             )
           ),
           div(
-            style = "position: absolute; left: 4em;bottom: 0.5em;",
-            dropdown(
-              downloadButton(outputId = "down_box_5", label = "Download plot"),
-              size = "xs",
-              icon = icon("download", class = "opt"), 
-              up = TRUE
+            style = "position: absolute; right: 0.5em; bottom: 0.5em;",
+            conditionalPanel(
+              "input.box5 == 'Diagnostics in selected patients'",
+              actionBttn(
+                inputId = "dia_adm",
+                icon = icon("search-plus", class = "opt"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
             )
           ),
-          withSpinner(
-            plotOutput("plot_dia_adm", height = 300),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
-          )
-        ),
-        div(
-          style = "position: absolute; right: 0.5em; bottom: 0.5em;",
-          conditionalPanel(
-            "input.box5 == 'Diagnostics in selected patients'",
-            actionBttn(
-              inputId = "dia_adm",
-              icon = icon("search-plus", class = "opt"),
-              style = "fill",
-              color = "danger",
-              size = "xs"
+          div(
+            style = "position: absolute; right: 0.5em; bottom: 0.5em;",
+            conditionalPanel(
+              "input.box5 == 'Timing of selected diagnostics'",
+              actionBttn(
+                inputId = "dia_timing",
+                icon = icon("search-plus", class = "opt"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
             )
           )
         )
       )
-    )
   })
-  
+
   observeEvent((input$dia_adm), {
     showModal(modalDialog(
       renderPlot({
         dia_adm() + theme(
-          axis.title = element_text(size = 26),
-          text = element_text(size = 20)
+          axis.title = element_text(size = 20),
+          text = element_text(size = 20),
+          plot.title = element_text(size = 26)
         )
       }, height = 600),
       easyClose = TRUE,
       size = "l",
       footer = NULL
     ))
-  })
-  
-  # UI - DIAGNOSTICS - 2 ------------------------------------------------------------------
-  
-  output$box6 <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box6",
-        width = NULL,
-        height = 400,
-        tabPanel(
-          title = "Diagnostics - timing",
-          withSpinner(
-            plotOutput("plot_dia_timing", height = 300),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
-          )
-        ),
-        div(
-          style = "position: absolute; right: 0.5em; bottom: 0.5em;",
-          conditionalPanel(
-            "input.box6 == 'Diagnostics - timing'",
-            actionBttn(
-              inputId = "dia_timing",
-              icon = icon("search-plus", class = "opt"),
-              style = "fill",
-              color = "danger",
-              size = "xs"
-            )
-          )
-        ),
-        div(
-          style = "position:absolute;left:0.5em;bottom: 0.5em;",
-          dropdown(
-            downloadButton(outputId = "down_box_6", label = "Download plot"),
-            size = "xs",
-            icon = icon("download", class = "opt"), 
-            up = TRUE
-          )
-        )
-      )
-    )
   })
   
   observeEvent((input$dia_timing), {
     showModal(modalDialog(
       renderPlot({
         plot_dia_timing() + theme(
-          axis.title = element_text(size = 26),
-          text = element_text(size = 20)
+          axis.title = element_text(size = 20),
+          text = element_text(size = 20),
+          plot.title = element_text(size = 26)
         )
       }, height = 600),
       easyClose = TRUE,
@@ -1001,133 +909,331 @@ server <- function(input, output, session) {
       footer = NULL
     ))
   })
-  
-  
-  
-  # UI - DIAGNOSTICS - 3 ------------------------------------------------------------------
-  
-  output$box7 <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box7",
-        width = NULL,
-        height = 400,
-        tabPanel(
-          title = "Diagnostics in relation",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box7.1",
-                label = "Select group", 
-                choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Subspecialty", "Admitting department"),
-                choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
-                selected = "year", 
-                direction = "vertical"
-              ),
-              radioGroupButtons(
-                inputId = "box7.2",
-                label = "Labels", 
-                choices = c("Show labels", "Hide labels"), 
-                selected = "Hide labels", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
+
+  # UI - DIAGNOSTICS - 2 ------------------------------------------------------------------
+
+  output$box6 <- renderUI({
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box6",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "Diagnostics in relation",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box6.1",
+                  label = "Select group", 
+                  choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
+                  selected = "year", 
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            div(
+              style = "position:absolute;left:4em;bottom: 0.5em;",
+              dropdown(
+                downloadButton(outputId = "down_box_7", label = "Download plot"),
+                size = "xs",
+                icon = icon("download", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              plotOutput("plot_dia_perform", height = 300),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "Table - Proportion performed",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box6.3",
+                  label = "Select group", 
+                  choiceNames = c("Antimicrobials", "Antimicrobial - Groups", "Year", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
+                  selected = "year", 
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              DT::dataTableOutput("dia_table"),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
             )
           ),
           div(
-            style = "position:absolute;left:4em;bottom: 0.5em;",
-            dropdown(
-              downloadButton(outputId = "down_box_7", label = "Download plot"),
-              size = "xs",
-              icon = icon("download", class = "opt"), 
-              up = TRUE
-            )
-          ),
-          withSpinner(
-            plotlyOutput("plot_dia_perform", height = 300),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
-          )
-        ),
-        tabPanel(
-          title = "Table - Proportion performed",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box8.0",
-                label = "Select group", 
-                choiceNames = c("Antimicrobials", "Antimicrobial - Groups", "Year", "Specialty", "Subspecialty", "Admitting department"),
-                choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
-                selected = "year", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
-            )
-          ),
-          withSpinner(
-            DT::dataTableOutput("dia_table"),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
-          )
-        ),
-        div(
-          style = "position:absolute;right:0.5em;bottom: 0.5em;",
-          conditionalPanel(
-            "input.box7 == 'Diagnostic performance'",
-            actionBttn(
-              inputId = "dia_perform",
-              icon = icon("search-plus", class = "opt"),
-              style = "fill",
-              color = "danger",
-              size = "xs"
+            style = "position:absolute;right:0.5em;bottom: 0.5em;",
+            conditionalPanel(
+              "input.box6 == 'Diagnostics in relation'",
+              actionBttn(
+                inputId = "dia_perform",
+                icon = icon("search-plus", class = "opt"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
             )
           )
         )
       )
-    )
   })
-  
+
   observeEvent((input$dia_perform), {
     showModal(modalDialog(
-      renderPlotly({ 
-        plot_dia_perform()
+      renderPlot({ 
+        plot_dia_perform() + theme(
+          axis.title = element_text(size = 20),
+          text = element_text(size = 20),
+          plot.title = element_text(size = 26)
+        )
       }),
       easyClose = TRUE,
       size = "l",
       footer = NULL
     ))
   })
+
+
+  # UI - DIAGNOSTICS - 3 ------------------------------------------------------------------
   
+  output$box7 <- renderUI({
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box7",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "First isolates in selected diagnostics", 
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box7.0",
+                  label = "Select group", 
+                  choiceNames = c("All", "Antimicrobial - Groups", "Antimicrobials", "Year", "Gender", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceValues = c("fullname", "ab_group", "ab_type", "year", "gender", "specialty", "sub_specialty", "adm_route"), 
+                  selected = "fullname", 
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            div(
+              style = "position: absolute; left: 4em; bottom: 0.5em;",
+              dropdown(
+                sliderInput(
+                  inputId = "box7.1",
+                  label = "Show top ...", 
+                  min = 0, 
+                  max = 50, 
+                  value = c(25), 
+                  step = 5
+                ),
+                size = "xs",
+                icon = icon("search-plus", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            div(
+              style = "position: absolute; left: 7.5em; bottom: 0.5em;",
+              dropdown(
+                downloadButton(outputId = "down_box_micro", label = "Download plot"),
+                size = "xs",
+                icon = icon("download", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              plotOutput("micro_plot", height = 300),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
+            )
+          ),
+          tabPanel(
+            title = "First isolates - table",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box7.2",
+                  label = "Select group", 
+                  choiceNames = c("All", "Year", "Gender", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceValues = c("fullname", "year", "gender", "specialty", "sub_specialty", "adm_route"), 
+                  selected = "fullname", 
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              DT::dataTableOutput("micro_table", height = 300),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
+            )
+          ),
+          div(
+            style = "position:absolute;right:0.5em;bottom: 0.5em;",
+            conditionalPanel(
+              "input.box7 == 'First isolates in selected diagnostics'",
+              actionBttn(
+                inputId = "micro_plus",
+                icon = icon("search-plus", class = "opt"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
+            )
+          )
+        )
+      )
+  })
+  
+  observeEvent((input$micro_plus), {
+    showModal(modalDialog(
+      renderPlot({
+        micro_plot() + theme(
+          axis.title = element_text(size = 20),
+          text = element_text(size = 20),
+          plot.title = element_text(size = 26)
+        )
+      }, height = 600),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
+    ))
+  })
   
   # UI - DIAGNOSTICS - 4 ------------------------------------------------------------------
   
   output$box8 <- renderUI({
     div(
       style = "position: relative",
+      div(
+        style = "position: absolute; left: 4em; bottom: 0.5em;",
+        dropdown(
+          selectizeInput(
+            inputId = "box8.1",
+            label = "Select isolates",
+            choices = sort(unique(microbiology$fullname)[!is.na(unique(microbiology$fullname))]),
+            multiple = TRUE, 
+            selected = "Escherichia coli"
+          ),
+          size = "xs",
+          label = "Isolates",
+          up = TRUE
+        )
+      ),
+      div(
+        style = "position: absolute; left: 9.5em; bottom: 0.5em;",
+        dropdown(
+          checkboxGroupButtons(
+            width = "300px", 
+            inputId = "box8.2",
+            label = "Select antimicrobials",
+            size = "xs", checkIcon = list("yes" = icon("check")),
+            individual = TRUE,
+            choiceValues = 
+              sort(c("peni", "oxac", "clox", "amox", "amcl", "ampi", "pita", "czol", "cfep",
+                             "cfur", "cfox", "cfot", "cfta", "cftr", "gent", "tobr", "amik", "trim",
+                             "trsu", "nitr", "fosf", "line", "cipr", "moxi", "vanc", "teic", "tetr",
+                             "tige", "doxy", "eryt", "clin", "azit", "imip", "mero", "metr", "chlo",
+                             "coli", "mupi")),
+            choiceNames = paste(
+              abname(
+              sort(c("peni", "oxac", "clox", "amox", "amcl", "ampi", "pita", "czol", "cfep",
+                     "cfur", "cfox", "cfot", "cfta", "cftr", "gent", "tobr", "amik", "trim",
+                     "trsu", "nitr", "fosf", "line", "cipr", "moxi", "vanc", "teic", "tetr",
+                     "tige", "doxy", "eryt", "clin", "azit", "imip", "mero", "metr", "chlo",
+                     "coli", "mupi"))),
+              sep = ", "
+            ),
+            selected = c("amox", "cipr")
+          ),
+          size = "xs",
+          label = "Antimicrobials",
+          up = TRUE
+        )
+      ),
       tabBox(
         id = "box8",
         width = NULL,
         height = 400,
         tabPanel(
-          title = "Microorganisms found",
+          title = "Resistance",
           div(
             style = "position: absolute; left: 0.5em; bottom: 0.5em;",
             dropdown(
               radioGroupButtons(
-                inputId = "box8",
-                label = "Select group", 
-                choiceNames = c("All", "Antimicrobial - Groups", "Antimicrobials", "Year", "Gender", "Specialty", "Subspecialty", "Admitting department"),
-                choiceValues = c("fullname", "ab_group", "ab_type", "year", "gender", "specialty", "sub_specialty", "adm_route"), 
-                selected = "fullname", 
+                inputId = "box8.0",
+                label = "Select group",
+                choiceNames = c("All", "Year", "Gender", "Specialty", "Subspecialty", "Admitting department"),
+                choiceValues = c("fullname", "year", "gender", "specialty", "sub_specialty", "adm_route"),
+                selected = "fullname",
+                direction = "vertical"
+              ),
+              radioGroupButtons(
+                inputId = "box8.0.1",
+                label = "Select calculation",
+                choices = c("Count", "Proportion"),
+                selected = "Count",
+                direction = "vertical"
+              ),
+              size = "xs",
+              icon = icon("gear", class = "opt"),
+              up = TRUE
+            )
+          ),
+          div(
+            style = "position: absolute; left: 17.5em; bottom: 0.5em;",
+            dropdown(
+              downloadButton(outputId = "down_box_res", label = "Download plot"),
+              size = "xs",
+              icon = icon("download", class = "opt"), 
+              up = TRUE
+            )
+          ),
+          withSpinner(
+            plotOutput("isolate_plot", height = 300),
+            type = 4,
+            color = "#d33724",
+            size = 0.7
+          )
+        ),
+        tabPanel(
+          title = "Resistance - over time",
+          div(
+            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+            dropdown(
+              radioGroupButtons(
+                inputId = "box8.3",
+                label = "Select time", 
+                choiceNames = c("per year", "per month", "per quarter"),
+                choiceValues = c("year", "yearmonth_test", "yearquarter_test"), 
+                selected = "yearquarter_test", 
                 direction = "vertical"
               ),
               size = "xs",
@@ -1136,43 +1242,72 @@ server <- function(input, output, session) {
             )
           ),
           div(
-            style = "position: absolute; left: 4em; bottom: 0.5em;",
+            style = "position: absolute; left: 17.5em; bottom: 0.5em;",
             dropdown(
-              sliderInput(
-                inputId = "box8.1",
-                label = "Show top ...", 
-                min = 0, 
-                max = 50, 
-                value = c(25), 
-                step = 5
-              ),
-              size = "xs",
-              icon = icon("search-plus", class = "opt"), 
-              up = TRUE
-            )
-          ),
-          div(
-            style = "position: absolute; left: 4em; bottom: 0.5em;",
-            dropdown(
-              downloadButton(outputId = "down_box_8", label = "Download plot"),
+              downloadButton(outputId = "down_box_res_ts", label = "Download plot"),
               size = "xs",
               icon = icon("download", class = "opt"), 
               up = TRUE
             )
           ),
           withSpinner(
-            plotOutput("micro_plot", height = 300),
+            plotOutput("isolate_ts", height = 300),
             type = 4,
-            color = radar_colors["red"],
+            color = "#d33724",
+            size = 0.7
+          )
+        ),
+        tabPanel(
+          title = "Resistance - table",
+          div(
+            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+            dropdown(
+              radioGroupButtons(
+                inputId = "box8.7",
+                label = "Select group", 
+                choiceNames = c("None", "Year", "Month", "Quarter", "Gender", "Specialty", "Subspecialty", "Admitting department"),
+                choiceValues = c("fullname", "year", "yearmonth_test", "yearquarter_test", "gender", "specialty", "sub_specialty", "adm_route"), 
+                selected = "fullname", 
+                direction = "vertical"
+              ),
+              radioGroupButtons(
+                inputId = "box8.8",
+                label = "Select calculation", 
+                choices = c("Count", "Proportion"),
+                selected = "Count", 
+                direction = "vertical"
+              ),
+              size = "xs",
+              icon = icon("gear", class = "opt"), 
+              up = TRUE
+            )
+          ),
+          withSpinner(
+            DT::dataTableOutput("isolate_table", height = 300),
+            type = 4,
+            color = "#d33724",
             size = 0.7
           )
         ),
         div(
           style = "position:absolute;right:0.5em;bottom: 0.5em;",
           conditionalPanel(
-            "input.box7 == 'Diagnostic performance'",
+            "input.box8 == 'Resistance'",
             actionBttn(
-              inputId = "dia_micro",
+              inputId = "res_plus",
+              icon = icon("search-plus", class = "opt"),
+              style = "fill",
+              color = "danger",
+              size = "xs"
+            )
+          )
+        ),
+        div(
+          style = "position:absolute;right:0.5em;bottom: 0.5em;",
+          conditionalPanel(
+            "input.box8 == 'Resistance - over time'",
+            actionBttn(
+              inputId = "res_ts",
               icon = icon("search-plus", class = "opt"),
               style = "fill",
               color = "danger",
@@ -1184,10 +1319,14 @@ server <- function(input, output, session) {
     )
   })
   
-  observeEvent((input$dia_micro), {
+  observeEvent((input$res_plus), {
     showModal(modalDialog(
       renderPlot({
-        micro_plot()
+        isolate_plot() + theme(
+          axis.title = element_text(size = 20),
+          text = element_text(size = 20),
+          plot.title = element_text(size = 26)
+        )
       }, height = 600),
       easyClose = TRUE,
       size = "l",
@@ -1195,258 +1334,277 @@ server <- function(input, output, session) {
     ))
   })
   
-  # UI - DIAGNOSTICS - ADVANCED ---------------------------------------------------
-  
-  output$box_log_advanced <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box_log_advanced",
-        width = NULL,
-        height = NULL,
-        tabPanel(
-          title = "Advanced options",
-          h5(strong("Logistic regression model \n (dependent variable = Diagnostics perfomed):")),
-          withSpinner(
-            verbatimTextOutput("logreg", placeholder = TRUE),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7,
-            proxy.height = "200px"
-          ),
-          h5(strong("Summary statistics")),
-          verbatimTextOutput("logreg_aic", placeholder = TRUE)
+  observeEvent((input$res_ts), {
+    showModal(modalDialog(
+      renderPlot({
+        isolate_ts() + theme(
+          axis.title = element_text(size = 20),
+          text = element_text(size = 20),
+          plot.title = element_text(size = 26)
         )
-      )
-    )
+      }, height = 600),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
+    ))
   })
   
-  
+
   # UI - OUTCOME - 1 -----------------------------------------------------
-  
+
   output$box_los1 <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box_los1",
-        width = NULL,
-        height = 400,
-        tabPanel(
-          title = "Length of stay",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_los1",
-                label = "Select group", 
-                choiceNames = c("All", "Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Subspecialty", "Admitting department"),
-                choiceValues = c("1", "gender", "year", "ab_group", "ab_type", "check", "specialty", "sub_specialty", "adm_route"), 
-                selected = , 
-                direction = "vertical",
-                size = "sm"
-              ),
-              prettySwitch(
-                inputId = "box_los1.2",
-                label = "Show histogram", 
-                value = FALSE,
-                slim = TRUE
-              ),
-              prettySwitch(
-                inputId = "box_los1.1", 
-                label = "Show legend", 
-                value = FALSE, 
-                slim = TRUE
-              ),
-              prettySwitch(
-                inputId = "box_los1.3",
-                label = "SPREAD OUT TO REMOVE OVERLAPS", 
-                value = FALSE,
-                slim = TRUE
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), up = TRUE
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box_los1",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "Length of stay",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box_los1.0",
+                  label = "Select group", 
+                  choiceNames = c("All", "Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceValues = c("1", "gender", "year", "ab_group", "ab_type", "check", "specialty", "sub_specialty", "adm_route"), 
+                  selected = , 
+                  direction = "vertical",
+                  size = "sm"
+                ),
+                prettySwitch(
+                  inputId = "box_los1.2",
+                  label = "Show histogram", 
+                  value = FALSE,
+                  slim = TRUE
+                ),
+                prettySwitch(
+                  inputId = "box_los1.1", 
+                  label = "Show legend", 
+                  value = FALSE, 
+                  slim = TRUE
+                ),
+                prettySwitch(
+                  inputId = "box_los1.3",
+                  label = "SPREAD OUT TO REMOVE OVERLAPS", 
+                  value = FALSE,
+                  slim = TRUE
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), up = TRUE
+              )
+            ),
+            div(
+              style = "position: absolute; left: 4em; bottom: 0.5em;",
+              dropdown(
+                sliderInput(
+                  inputId = "zoom",
+                  label = "Zoom (days)",
+                  min = 0,
+                  max = max(as.numeric(set_reac_1()$LOS), na.rm = TRUE),
+                  value = c(0, 30),
+                  step = 10
+                ),
+                size = "xs",
+                icon = icon("search-plus", class = "opt"),
+                up = TRUE
+              )
+            ),
+            div(
+              style = "position: absolute; left: 7.5em; bottom: 0.5em;",
+              dropdown(
+                downloadButton(outputId = "down_box_los1", label = "Download plot"),
+                size = "xs",
+                icon = icon("download", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              plotOutput("plot_los", height = 300),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
             )
           ),
           div(
-            style = "position: absolute; left: 4em; bottom: 0.5em;",
-            dropdown(
-              sliderInput(
-                inputId = "zoom",
-                label = "Zoom (days)",
-                min = 0,
-                max = max(as.numeric(set_reac_1()$LOS), na.rm = TRUE),
-                value = c(0, 30),
-                step = 10
-              ),
-              size = "xs",
-              icon = icon("search-plus", class = "opt"),
-              up = TRUE
+            style = "position: absolute; right: 0.5em; bottom: 0.5em;",
+            conditionalPanel(
+              "input.box_los1 == 'Length of stay'",
+              actionBttn(
+                inputId = "los",
+                icon = icon("search-plus", class = "opt"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
             )
-          ),
-          div(
-            style = "position: absolute; left: 7.5em; bottom: 0.5em;",
-            dropdown(
-              downloadButton(outputId = "down_box_los1", label = "Download plot"),
-              size = "xs",
-              icon = icon("download", class = "opt"), 
-              up = TRUE
-            )
-          ),
-          withSpinner(
-            plotOutput("plot_los", height = 300),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
           )
         )
       )
-    )
   })
   
+  observeEvent((input$los), {
+    showModal(modalDialog(
+      renderPlot({
+        plot_los() + theme(
+          axis.title = element_text(size = 20),
+          text = element_text(size = 20),
+          plot.title = element_text(size = 26)
+        )
+      }, height = 600),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
+    ))
+  })
   
+
   # UI - OUTCOME - 2 ---------------------------------------------------
-  
+
   output$box_los2 <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box_los2",
-        width = NULL,
-        height = 400,
-        tabPanel(
-          title = "Length of stay - Kaplan-Meier",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              downloadButton(outputId = "down_box_los2", label = "Download plot"),
-              size = "xs",
-              icon = icon("download", class = "opt"), 
-              up = TRUE
-            )
-          ),
-          withSpinner(
-            plotOutput("kaplan_los", height = 300),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
-          ),
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box_los2",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "Length of stay - Kaplan-Meier",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                downloadButton(outputId = "down_box_los2", label = "Download plot"),
+                size = "xs",
+                icon = icon("download", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              plotOutput("kaplan_los", height = 300),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
+            ),
           div(
             style = "position: absolute; left: 4.5em; bottom: 0.5em;",
             htmlOutput("text_box_los2")
+          ),
+          div(
+            style = "position: absolute; right: 0.5em; bottom: 0.5em;",
+            conditionalPanel(
+              "input.box_los2 == 'Length of stay - Kaplan-Meier'",
+              actionBttn(
+                inputId = "los_km",
+                icon = icon("search-plus", class = "opt"),
+                style = "fill",
+                color = "danger",
+                size = "xs"
+              )
+            )
+          )
           )
         )
       )
-    )
+  })
+  
+  observeEvent((input$los_km), {
+    showModal(modalDialog(
+      renderPlot({
+        validate(
+          need(!is.null(kaplan_los()), 'Please select at least two groups in box (left)'),
+          need(length(unique(kaplan_los()$plot$data$strata)) <= 5, 'Max. number of groups = 5; please adjust selection')
+        )
+        kaplan_los()
+      }, height = 600),
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
+    ))
   })
   
   output$text_box_los2 <- renderText({
     
     text <- function(x){
-      if(input$box_los1 == "1"){y <- "All"}
-      if(input$box_los1 == "gender"){y <- "Gender"}
-      if(input$box_los1 == "year"){y <- "Year"}
-      if(input$box_los1 == "specialty"){y <- "Specialty"}
-      if(input$box_los1 == "sub_specialty"){y <- "Subspecialty"}
-      if(input$box_los1 == "ab_group"){y <- "Antimicrobial - Groups"}
-      if(input$box_los1 == "ab_type"){y <- "Antimicrobials"}
-      if(input$box_los1 == "check"){y <- "Diagnostics"}
-      if(input$box_los1 == "adm_route"){y <- "Admitting department"}
+      if(input$box_los1.0 == "1"){y <- "All"}
+      if(input$box_los1.0 == "gender"){y <- "Gender"}
+      if(input$box_los1.0 == "year"){y <- "Year"}
+      if(input$box_los1.0 == "specialty"){y <- "Specialty"}
+      if(input$box_los1.0 == "sub_specialty"){y <- "Subspecialty"}
+      if(input$box_los1.0 == "ab_group"){y <- "Antimicrobial - Groups"}
+      if(input$box_los1.0 == "ab_type"){y <- "Antimicrobials"}
+      if(input$box_los1.0 == "check"){y <- "Diagnostics"}
+      if(input$box_los1.0 == "adm_route"){y <- "Admitting department"}
       y
     }
     
-    paste0("Groups: ","<b>",text(input$box_los1), "<br>", "</b>", "(Select groups and legend in box to the left.)")
+    paste0("Groups: ","<b>",text(input$box_los1.0), "<br>", "</b>", "(Select groups and legend in box to the left.)")
   })
-  
-  
+
+
   # UI - OUTCOME - 3 ---------------------------------------------------
-  
+
   output$box_los3 <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box_los3",
-        width = NULL,
-        height = 400,
-        tabPanel(
-          title = "Length of stay - table",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_los3",
-                label = "Select group", 
-                choiceNames = c("Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Subspecialty", "Admitting department"),
-                choiceValues = c("gender", "year", "ab_group", "ab_type", "check", "specialty", "sub_specialty", "adm_route"), 
-                selected = "gender", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
+      div(
+        style = "position: relative",
+        tabBox(
+          id = "box_los3",
+          width = NULL,
+          height = 400,
+          tabPanel(
+            title = "Length of stay - table",
+            div(
+              style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+              dropdown(
+                radioGroupButtons(
+                  inputId = "box_los3",
+                  label = "Select group", 
+                  choiceNames = c("Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceValues = c("gender", "year", "ab_group", "ab_type", "check", "specialty", "sub_specialty", "adm_route"), 
+                  selected = "gender", 
+                  direction = "vertical"
+                ),
+                size = "xs",
+                icon = icon("gear", class = "opt"), 
+                up = TRUE
+              )
+            ),
+            withSpinner(
+              DT::dataTableOutput("table_los", height = 300),
+              type = 4,
+              color = "#d33724",
+              size = 0.7
             )
-          ),
-          withSpinner(
-            DT::dataTableOutput("table_los"),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7
           )
         )
       )
-    )
   })
-  
-  
-  # UI - OUTCOME - ADVANCED ---------------------------------------------------
-  
-  output$box_cox_advanced <- renderUI({
-    div(
-      style = "position: relative",
-      tabBox(
-        id = "box_cox_advanced",
-        width = NULL,
-        height = 800,
-        tabPanel(
-          title = "Advanced options",
-          h5(strong("Cox regression model \ (lenght of stay):")),
-          withSpinner(
-            verbatimTextOutput("coxreg", placeholder = TRUE),
-            type = 4,
-            color = radar_colors["red"],
-            size = 0.7,
-            proxy.height = "200px"
-          ),
-          h5(strong("Summary statistics:")),
-          verbatimTextOutput("coxreg_aic", placeholder = TRUE)
-        )
-      )
-    )
-  })
-  
+
+
   # BOX PATIENTS - 1 ------------------------------------------------------------
-  
+
   plot_pat_select <- reactive({
-    
+
     pat_select <- set_reac_1() %>%
-      group_by(sub_specialty, specialty) %>%
-      summarise(n = n()) %>% arrange(desc(n))
+      group_by(sub_specialty) %>%
+      summarise(n = n()) %>% 
+      arrange(desc(n))
     
     if (input$box_pat1 == "Show top 10 only") {
       pat_select <- pat_select[1:10,]
     } else{
       pat_select
     }
-    
+
     plot <- 
       ggplot(pat_select, 
              aes(n, 
                  y = 0, 
                  group = sub_specialty, 
-                 fill = n,
                  text = sub_specialty, 
                  count = n)) +
       geom_point(aes(size = n, fill = sub_specialty), 
-                 alpha = 0.8, 
+                 alpha = 0.6, 
                  color = "black", 
                  shape = 21) +
       coord_cartesian(ylim = c(-2, 2)) +
@@ -1457,7 +1615,7 @@ server <- function(input, output, session) {
         name = "Number of patients (use mouse to identify subspecialties)", 
         trans = "log10", 
         breaks = c(1, 10, 100, 1000, 10000)) +
-      scale_fill_radar() +
+      scale_fill_viridis_d() + 
       theme(
         panel.grid.major = element_line(color = "lightgrey", size = 0.2),
         panel.grid.major.y = element_blank(),
@@ -1470,41 +1628,41 @@ server <- function(input, output, session) {
         plot.title = element_text(size = 10, hjust = 0),
         panel.border = element_rect(colour = "darkgrey", fill = NA, size = 1)
       )
-    
+
     
     style(
       hide_legend(
         ggplotly(tooltip = c("text", "Count"))), 
-      hoverlabel = list(bgcolor = "white"), 
-      layout = list(hovermode = "compare")) %>%
-      layout(margin = list(b = 60))
+      hoverlabel = list(bgcolor = "white")
+      )
   })
-  
+
   output$plot_pat_select <- renderPlotly({
     plot_pat_select()
   })
   
-  
+
   # BOX PATIENTS - 2 ----------------------------------------------------------
-  
+
   table_pat_all <- reactive(
     DT::datatable(
       set_reac_1() %>% 
         count(sub_specialty) %>% 
         arrange(desc(n)) %>% 
         rename("Subspecialty" = sub_specialty),
+      rownames = FALSE,
       options = list(
-        dom = "ftpr",
+        dom = 'frtp',
         style = "bootstrap",
         lengthMenu = c(seq(5, 150, 5))
-      )
+        )
     )
   )
   
   output$table_pat_all <- DT::renderDataTable({
     table_pat_all()
   })
-  
+
   plot_age_select <- reactive({
     if (input$box_pat1.1 == "gender") {
       ggplot(set_reac_1(), aes(age, fill = gender)) +
@@ -1515,11 +1673,14 @@ server <- function(input, output, session) {
                   color = "black") +
         scale_x_continuous(breaks = seq(0, 100, 10)) +
         labs(x = "Age", y = "Count") +
+        ggtitle("Patient age at admission") +
         scale_fill_manual(values = c("#d1351b", "#f39c12"), 
                           name = "Gender", 
-                          breaks = c("M", "F"), 
-                          label = c("Male", "Female")) +
-        theme_minimal()
+                          breaks = unique(set_reac_1()$gender), 
+                          label = unique(set_reac_1()$gender)) +
+        theme_minimal() +
+        theme(plot.title = element_text(face = "bold", size = 12))
+      
     }
     else {
       ggplot(set_reac_1(), aes(age)) +
@@ -1531,55 +1692,102 @@ server <- function(input, output, session) {
                   color = "black") +
         scale_x_continuous(breaks = seq(0, 100, 10)) +
         labs(x = "Age", y = "Count") +
+        ggtitle("Patient age at admission") +
         guides(fill = FALSE) +
-        theme_minimal() 
+        theme_minimal() +
+        theme(plot.title = element_text(face = "bold", size = 12))
     }
   })
-  
+
   output$plot_age_select <- renderPlot({
     plot_age_select()
   })
-  
-  
+
+
   # BOX PATIENTS - 3 ----------------------------------------------------------
   
   plot_year_select <- reactive({
-    ggplot(set_reac_1(), aes_string("factor(year)", fill = input$box_year1)) +
-      geom_bar(color = "black", alpha = 0.6, position = if (input$box_year2 == "Count") {
-        "stack" 
+    
+    years <- set_reac_1() %>% 
+      count(year)
+    
+    months <- set_reac_1() %>% 
+      count(yearmonth_adm)
+    
+    quarter <- set_reac_1() %>% 
+      count(yearquarter_adm)
+    
+    if (input$box_year1 == "years") {
+      plot <- qic(year, n,
+                  data = years, 
+                  agg.fun = "sum",
+                  xlab = "Year",
+                  ylab = "Count",
+                  title = "Admissions per year") +
+        scale_x_continuous(breaks = 
+                             c(min(set_reac_2()$year, na.rm = TRUE):max(set_reac_2()$year, na.rm = TRUE)))
+      
+    } else {
+      if (input$box_year1 == "yearquarter_adm") {
+        plot <- qic(yearquarter_adm, n,
+                    data = quarter,
+                    agg.fun = "sum",
+                    xlab = "Quarter",
+                    ylab = "Count",
+                    title = "Admissions per quarter") +
+          scale_x_yearqtr(n = length(quarter$yearquarter_adm)/4) 
+        
       } else {
-        "fill"
-      }) +
-      labs(x = "Year", y = "Count") +
-      scale_fill_manual(values = c("#d1351b", "#f39c12"), 
-                        name = "Gender", 
-                        breaks = c("M", "F"), 
-                        label = c("Male", "Female")) +
-      theme_minimal()
+        plot <- qic(yearmonth_adm, n,
+                    data = months,
+                    agg.fun = "sum",
+                    xlab = "Month",
+                    ylab = "Count",
+                    title = "Admissions per month") +
+          scale_x_yearmon(n = length(months$yearmonth_adm)/12)
+      }
+    }
+    
+    plot +
+      labs(caption = "(Line represents median; if red-dotted = signal for non-random variation)") +
+      theme(plot.caption = element_text(size = 10, colour = "darkgrey"), 
+            plot.title = element_text(face = "bold", size = 12))
+
   })
-  
+
   output$plot_year_select <- renderPlot({
     plot_year_select()
   })
-  
-  
+
+
   # BOX AB - 1 -------------------------------------------------------------------
-  
+
   plot_ab <- reactive({
-    if (input$box1.1 == "Prescriptions") {
-      ggplot(
-        data = 
-          if (input$box1.0 == "ab_type") {
-            set_ab()
-          } 
-        else {
-          set_ab_group()
-        },
-        aes_string(
-          x = paste0("reorder(", input$box1.0, ",n)"),
-          y = "n",
-          fill = "n"
-        )) +
+    
+    data <- set_reac_2() %>% 
+      group_by_("id", input$box1.0) %>% 
+      summarise(
+        DDD_sum = sum(ddd_per_prescription, na.rm = TRUE),
+        DOT_sum = sum(ab_days, na.rm = TRUE)
+      ) %>% 
+      ungroup() %>% 
+      left_join(
+        set_reac_2() %>% 
+          select(id, LOS) %>% 
+          distinct()
+      ) %>% 
+      mutate(DDD_per_day_100 = DDD_sum/LOS/100,
+             DOT_per_day_100 = DOT_sum/LOS/100) %>% 
+      group_by_(input$box1.0) %>% 
+      summarise(DDD_100 = sum(DDD_per_day_100),
+                DOT_100 = sum(DOT_per_day_100))
+    
+    prescriptions <- 
+        ggplot(data = set_reac_2() %>% count_(input$box1.0), 
+               aes_string(
+                 x = paste0("reorder(", input$box1.0, ", n)"),
+                 y = "n",
+                 fill = "n")) +
         geom_bar(stat = "identity",
                  color = "black",
                  alpha = 0.8) +
@@ -1587,362 +1795,468 @@ server <- function(input, output, session) {
         labs(x = NULL, y = "No. of prescriptions") +
         guides(fill = "none") +
         theme_minimal() +
-        coord_flip()
-    }
-    else {
-      if (input$box1.1 == "DDD per 100 bed days") {
-        
-        LOS_sum <- as.numeric(sum(set_reac_2()$LOS)) / 100
-        
-        set_reac_2() %>%
-          filter(!is.na(ddd_per_prescription)) %>%
-          group_by_(input$box1.0) %>%
-          summarise(DDD_sum_100 = sum(ddd_per_prescription) / LOS_sum) %>%
-          ggplot(aes_string(
-            x = paste0("reorder(", input$box1.0, ",DDD_sum_100)"),
-            y = "DDD_sum_100",
-            fill = "DDD_sum_100"
-          )) +
-          geom_bar(stat = "identity",
-                   color = "black",
-                   alpha = 0.8) +
-          scale_fill_radar(discrete = FALSE, palette = "hot") +
-          labs(x = NULL, y = "DDD per 100 bed days") +
-          guides(fill = "none") +
-          theme_minimal() +
-          coord_flip()
-      }
-      else {
-        
-        LOS_sum <- sum(set_reac_2()$LOS) / 100
-        
-        set_reac_2() %>%
-          group_by_(input$box1.0) %>%
-          summarise(DOT_sum_100 = as.numeric(sum(ab_days)) / LOS_sum) %>%
-          ggplot(aes_string(
-            x = paste0("reorder(", input$box1.0, ",DOT_sum_100)"),
-            y = "DOT_sum_100",
-            fill = "DOT_sum_100"
-          )) +
-          geom_bar(stat = "identity",
-                   color = "black",
-                   alpha = 0.8) +
-          scale_fill_radar(discrete = FALSE,
-                           palette = "cool",
-                           reverse = TRUE) +
-          labs(x = NULL, y = "DOT per 100 bed days") +
-          guides(fill = "none") +
-          theme_minimal() +
-          coord_flip()
-      }
-    }
-  })
-  
-  
-  output$plot_ab <- renderPlot({
-    plot_ab()
-  })
-  
-  
-  
-  # BOX AB - 2 --------------------------------------------------------------
-  
-  plot_DDD_all <- reactive({
-    
-    DDD_set <- set_reac_1() %>%
-      filter(!is.na(ddd_per_prescription)) %>%
-      group_by_(input$box2.1) %>%
-      mutate(LOS_sum_100 = as.numeric(sum(LOS)) / 100, 
-             DDD_sum_all = sum(ddd_per_prescription)) %>%
-      mutate(DDD_100 = DDD_sum_all / LOS_sum_100)
-    
-    plot <- 
-      ggplot(DDD_set, aes_string(input$box2.1, "DDD_100", fill = "DDD_100")) +
-      geom_col(position = "identity", 
-               color = "black", 
+        coord_flip() +
+        ggtitle("Total number of prescriptions") +
+        theme(plot.title = element_text(face = "bold", size = 12))
+
+
+    ddd_dot <- 
+      ggplot(data, aes_string(
+        x = paste0("reorder(", input$box1.0, ",", input$box1.1, ")"),
+        y = input$box1.1,
+        fill = input$box1.1)) +
+      geom_bar(stat = "identity",
+               color = "black",
                alpha = 0.8) +
-      scale_fill_radar(discrete = FALSE, palette = "hot") +
-      guides(fill = FALSE) +
+      scale_fill_continuous(high = "#8c8c8c", low = "#cccccc") +
+      labs(x = NULL, y = if(input$box1.1 == "DDD_100") {"DDD per 100 bed days"} else {"DOT per 100 bed days"}) +
+      guides(fill = "none") +
       theme_minimal() +
-      labs(x = NULL, y = "DDD per 100 patient days") +
-      if (input$box2.1 == "sub_specialty" | input$box2.1 == "adm_route") {
-        if (input$box2.2 == "Show labels") {
-          theme(axis.text.x = element_text(angle = 90, hjust = 1), 
-                legend.position = "none")
-        } else {
-          theme(axis.text.x = element_blank())
-        }
-      }
+      coord_flip() + 
+      ggtitle(if(input$box1.1 == "DDD_100") {"Total amount of DDD per 100 bed days"} else {"Total amount of DOT per 100 bed days"}) +
+      theme(plot.title = element_text(face = "bold", size = 12))
     
-    if (input$box2.0 == "Top 3") {
-      plot +
-        geom_label_repel(data = DDD_set %>% 
-                           arrange(-DDD_100) %>% 
-                           distinct(input$box2.0, .keep_all = TRUE) %>% 
-                           head(3), 
-                         aes_string(label = input$box2.1))
+    
+    if (input$box1.1 == "prescriptions") {
+      prescriptions
     } else {
-      plot
+      ddd_dot
     }
   })
   
-  output$plot_DDD_all <- renderPlot({
-    plot_DDD_all()
+
+  output$plot_ab <- renderPlot({
+   plot_ab()
+  })
+
+
+
+  # BOX AB - 2 --------------------------------------------------------------
+
+  # DDD & DOT calculation
+  
+  ddd_dot <- reactive({
+    
+    set_reac_2() %>% 
+      group_by(id, year, 
+               yearmonth_adm, yearquarter_adm, specialty, sub_specialty, adm_route) %>% 
+      summarise(
+        DDD_sum = sum(ddd_per_prescription, na.rm = TRUE),
+        DOT_sum = sum(ab_days, na.rm = TRUE)
+      ) %>% 
+      ungroup() %>% 
+      left_join(
+        set_reac_2() %>% select(id, LOS)
+      ) %>% 
+      distinct() %>% 
+      mutate(DDD_per_day_100 = DDD_sum/LOS/100,
+             DOT_per_day_100 = DOT_sum/LOS/100)
+      
+  })
+  
+  # Defined daily doses
+  
+  ddd_ts <- reactive({
+    
+    plot_year <- qic(x = year, y = DDD_per_day_100, 
+                      data = ddd_dot(),
+                      agg.fun = "sum",
+                      xlab = "Year",
+                      ylab = "DDD per 100 bed days",
+                      title = "Defined daily doses (DDD) / 100 bed days per year",
+                      facets = 
+                        if (input$box2.3 == "specialty") {
+                          ~ specialty
+                        } else { 
+                          if (input$box2.3 == "sub_specialty") {
+                            ~ sub_specialty
+                          } else {
+                            if (input$box2.3 == "adm_route") {
+                              ~ adm_route
+                            } else {
+                              NULL
+                            }
+                          }
+                        }
+                     ) + scale_x_continuous(breaks = 
+                                              c(min(set_reac_2()$year, na.rm = TRUE):max(set_reac_2()$year, na.rm = TRUE)))
+
+    plot_month <- qic(x = yearmonth_adm, y = DDD_per_day_100,
+                      data = ddd_dot(), 
+                      agg.fun = "sum",
+                      xlab = "Months",
+                      ylab = "DDD per 100 bed days",
+                      title = "Defined daily doses (DDD) / 100 bed days per month",
+                      facets =
+                        if (input$box2.3 == "specialty") {
+                          ~ specialty
+                        } else {
+                          if (input$box2.3 == "sub_specialty") {
+                            ~ sub_specialty
+                          } else {
+                            if (input$box2.3 == "adm_route") {
+                              ~ adm_route
+                            } else {
+                              NULL
+                            }
+                          }
+                        }
+                      ) + scale_x_yearmon(n = length(unique(set_reac_2()$yearmonth_adm))/4)
+
+    plot_quarter <- qic(x = yearquarter_adm, y = DDD_per_day_100,
+                        data = ddd_dot(),
+                        agg.fun = "sum",
+                        xlab = "Quarter",
+                        ylab = "DDD per 100 bed days",
+                        title = "Defined daily doses (DDD) / 100 bed days per quarter",
+                        facets =
+                          if (input$box2.3 == "specialty") {
+                            ~ specialty
+                          } else {
+                            if (input$box2.3 == "sub_specialty") {
+                              ~ sub_specialty
+                            } else {
+                              if (input$box2.3 == "adm_route") {
+                                ~ adm_route
+                              } else {
+                                NULL
+                              }
+                            }
+                          }
+                        ) + scale_x_yearqtr(n = length(unique(set_reac_2()$yearquarter_adm))/4)
+    
+    if (input$box2.2 == "yearmonth_adm") {
+      plot <- plot_month
+    } else { 
+      if (input$box2.2 == "yearquarter_adm") {
+      plot <- plot_quarter
+      } else {
+        plot <- plot_year
+      }
+    }
+    
+    plot + 
+      labs(caption = "(Line represents median; if red-dotted = signal for non-random variation)") +
+      theme(plot.caption = element_text(size = 10, colour = "darkgrey"), 
+            plot.title = element_text(face = "bold", size = 12),
+            axis.text.x = element_text(angle = 90))
+    
+  })
+  
+  output$ddd_ts <- renderPlot({
+    ddd_ts()
+  })
+
+
+  # BOX AB - 3 --------------------------------------------------------------
+
+  # Days of therapy
+  
+  dot_ts <- reactive({
+    
+    plot_year <- qic(x = year, y = DOT_per_day_100,
+                     data = ddd_dot(),
+                     agg.fun = "sum",
+                     xlab = "Year",
+                     ylab = "DOT per 100 bed days",
+                     title = "Days of therapy (DOT) / 100 bed days per year",
+                     facets = 
+                       if (input$box3.3 == "specialty") {
+                         ~ specialty
+                       } else { 
+                         if (input$box3.3 == "sub_specialty") {
+                           ~ sub_specialty
+                         } else {
+                           if (input$box3.3 == "adm_route") {
+                             ~ adm_route
+                           } else {
+                             NULL
+                           }
+                         }
+                       }
+    ) + scale_x_continuous(breaks = 
+                             c(min(set_reac_2()$year, na.rm = TRUE):max(set_reac_2()$year, na.rm = TRUE)))
+    
+    plot_month <- qic(x = yearmonth_adm, y = DOT_per_day_100,
+                      data = ddd_dot(),
+                      agg.fun = "sum",
+                      xlab = "Months",
+                      ylab = "DOT per 100 bed days",
+                      title = "Days of therapie (DOT) / 100 bed days per month",
+                      facets = 
+                        if (input$box3.3 == "specialty") {
+                          ~ specialty
+                        } else { 
+                          if (input$box3.3 == "sub_specialty") {
+                            ~ sub_specialty
+                          } else {
+                            if (input$box3.3 == "adm_route") {
+                              ~ adm_route
+                            } else {
+                              NULL
+                            }
+                          }
+                        }
+    ) + scale_x_yearmon(n = length(unique(set_reac_2()$yearmonth_adm))/4)
+    
+    plot_quarter <- qic(x = yearquarter_adm, y = DOT_per_day_100,
+                        data = ddd_dot(),
+                        agg.fun = "sum",
+                        xlab = "Quarter",
+                        ylab = "DOT per 100 bed days",
+                        title = "Days of therapy (DOT) / 100 bed days per quarter",
+                        facets = 
+                          if (input$box3.3 == "specialty") {
+                            ~ specialty
+                          } else { 
+                            if (input$box3.3 == "sub_specialty") {
+                              ~ sub_specialty
+                            } else {
+                              if (input$box3.3 == "adm_route") {
+                                ~ adm_route
+                              } else {
+                                NULL
+                              }
+                            }
+                          }
+    ) + scale_x_yearqtr(n = length(unique(set_reac_2()$yearquarter_adm))/4)
+    
+    if (input$box3.2 == "yearmonth_adm") {
+      plot <- plot_month
+    } else { 
+      if (input$box3.2 == "yearquarter_adm") {
+        plot <- plot_quarter
+      } else {
+        plot <- plot_year
+      }
+    }
+    
+    plot + 
+      labs(caption = "(Line represents median; if red-dotted = signal for non-random variation)") +
+      theme(plot.caption = element_text(size = 10, colour = "darkgrey"), 
+            plot.title = element_text(face = "bold", size = 12),
+            axis.text.x = element_text(angle = 90))
+    
+  })
+  
+  output$dot_ts <- renderPlot({
+    dot_ts()
   })
   
   
-  # BOX AB - 3 --------------------------------------------------------------
-  
-  plot_DOT_all <- reactive({
-    DOT_set <- set_reac_1() %>%
-      filter(!is.na(ab_days)) %>%
-      group_by_(input$box3.1.0) %>%
-      mutate(LOS_sum_100 = as.numeric(sum(LOS)) / 100, DOT_sum_all = as.numeric(sum(ab_days))) %>%
-      mutate(DOT_100 = DOT_sum_all / LOS_sum_100)
-    
-    plot <- 
-      ggplot(DOT_set, aes_string(input$box3.1.0, "DOT_100", fill = "DOT_100")) +
-      geom_col(position = "identity", 
-               color = "black", 
-               alpha = 0.8) +
-      scale_fill_radar(discrete = FALSE, palette = "cool", reverse = TRUE) +
-      guides(fill = FALSE) +
-      theme_minimal() +
-      labs(x = NULL, y = "DOT per 100 patient days") +
-      if (input$box3.1.0 == "sub_specialty" | input$box3.1.0 == "adm_route") {
-        if (input$box3.1.1 == "Show labels") {
-          theme(axis.text.x = element_text(angle = 90, hjust = 1), 
-                legend.position = "none")
-        }
-        else {
-          theme(axis.text.x = element_blank())
-        }
-      }
-    
-    if (input$box3.1.2 == "Top 3") {
-      plot +
-        geom_label_repel(data = DOT_set %>% arrange(-DOT_100) %>% 
-                           distinct(input$box3.1.0, .keep_all = TRUE) %>% 
-                           head(3), 
-                         aes_string(label = input$box3.1.0))
+
+
+  # BOX AB - 4 --------------------------------------------------------------
+
+ output$table_ab <- DT::renderDataTable({
+
+   table <- set_reac_2() %>% 
+     group_by_("id", input$box4.0) %>% 
+     summarise(
+       DDD_sum = sum(ddd_per_prescription, na.rm = TRUE),
+       DOT_sum = sum(ab_days, na.rm = TRUE)
+     ) %>% 
+     left_join(
+       set_reac_2() %>% select(id, LOS)
+     ) %>% 
+     distinct() %>% 
+     ungroup() %>% 
+     mutate(DDD_per_day = DDD_sum/LOS,
+            DOT_per_day = DOT_sum/LOS) %>% 
+     group_by_(input$box4.0) %>% 
+     summarise(
+       "DDD per 100 bed days" = round(sum(DDD_per_day)/100, 2),
+       "DOT per 100 bed days" = round(sum(DOT_per_day)/100, 2)
+     ) %>% 
+    rename("Selected variables" = input$box4.0)
+
+
+  datatable(
+    if (input$box4.1 == "DDD per 100 bed days") {
+      table[,c(1,2)]
     }
     else {
-      plot
-    }
-  })
-  
-  output$plot_DOT_all <- renderPlot({
-    plot_DOT_all()
-  })
-  
-  
-  # BOX AB - 4 --------------------------------------------------------------
-  
-  output$table_ab <- DT::renderDataTable({
-    DDD_set_ab <-
-      set_reac_2() %>%
-      filter(!is.na(ddd_per_prescription)) %>%
-      group_by_(if (input$box4.0 == "ab_type") {
-        "ab_type"
-      } else {
-        (input$box4.0)
-      }) %>%
-      mutate(
-        LOS_sum_100 = as.numeric(sum(LOS)) / 100,
-        DDD_sum_all = sum(ddd_per_prescription)
-      ) %>%
-      mutate(DDD_100 = round(DDD_sum_all / LOS_sum_100), 1) %>%
-      select_(if (input$box4.0 == "ab_type") {
-        "ab_type"
-      } else {
-        (input$box4.0)
-      }, "DDD_100") %>%
-      rename("DDD per 100 bed days" = DDD_100)
-    
-    DOT_set_ab <-
-      set_reac_2() %>%
-      filter(!is.na(ab_days)) %>%
-      group_by_(if (input$box4.0 == "ab_type") {
-        "ab_type"
-      } else {
-        (input$box4.0)
-      }) %>%
-      mutate(
-        LOS_sum_100 = as.numeric(sum(LOS)) / 100,
-        DOT_sum_all = as.numeric(sum(ab_days))
-      ) %>%
-      mutate(DOT_100 = round(DOT_sum_all / LOS_sum_100), 1) %>%
-      select_(if (input$box4.0 == "ab_type") {
-        "ab_type"
-      } else {
-        (input$box4.0)
-      }, "DOT_100") %>%
-      rename("DOT per 100 bed days" = DOT_100)
-    
-    
-    datatable(
-      if (input$box4.1 == "DDD per 100 bed days") {
-        DDD_set_ab %>% distinct_(input$box4.0, .keep_all = TRUE)
-      }
-      else {
-        DOT_set_ab %>% distinct_(input$box4.0, .keep_all = TRUE)
-      },
-      rownames = FALSE,
-      colnames = c("Group", input$box4.1),
-      options = list(
-        dom = "ftpr",
-        style = "bootstrap",
-        lengthMenu = c(seq(5, 150, 5))
-      )
+      table[,c(1,3)]
+    },
+    rownames = FALSE,
+    extensions = "Buttons",
+    options = list(
+      dom = 'Bfrtp',
+      buttons = c('csv', 'excel', 'pdf'),
+      style = "bootstrap",
+      lengthMenu = c(seq(5, 150, 5))
     )
-  })
-  
-  
+  )
+}, server = FALSE)
+
+
   # BOX DIAGNOSTICS - 1  ------------------------------------------------------------------
-  
+
   dia_adm <- reactive({
-    ggplot(set_reac_1(), aes_string(input$box5.1, fill = "check")) +
-      geom_bar(
-        position = input$box5.2, 
-        color = "black", 
-        alpha = 0.8) +
+    
+    ts <- set_reac_1() %>% 
+      group_by(id) %>% 
+      distinct(check, .keep_all = TRUE) %>% 
+      ungroup() %>% 
+      group_by_(input$box5.1, "check") %>% 
+      summarise(n = n())
+    
+    plot <-
+      ggplot(ts, aes_string(input$box5.1, "n", fill = "check")) +
       theme_minimal() +
-      theme(axis.text.x = if (input$box5.1 == "yearquarter") {
-        element_text(angle = 90, hjust = 1)
-      } else {
-        element_text(angle = 0, hjust = 1)
-      }) +
+      theme(plot.title = element_text(face = "bold", size = 12)) +
+      ggtitle(
+        paste0("Diagnostic performed within ",
+               min(input$checkInput),
+               " and ",
+               max(input$checkInput),
+               " days \nfrom start of antimicrobials")) +
       labs(x = if (input$box5.1 == "year") {
-        paste("Year")
+        paste("Per year")
       } else {
-        paste("Quarter")
+        if (input$box5.1 == "yearquarter_adm") {
+          paste("Per quarter")
+        } else {
+          paste("Per month")
+        }
       }, y = if (input$box5.2 == "dodge") {
         paste("Count")
       } else {
         paste("Proportion")
       }) +
+      if (input$box5.1 == "yearquarter_adm") { 
+        scale_x_yearqtr(n = 12)
+      } else {
+        if (input$box5.1 == "yearmonth_adm") {
+          scale_x_yearmon(n = 12)
+        }
+      }
+    
+    plot <- plot + 
       if (input$diagnosticsInput == "bc_timing") {
         scale_fill_manual(
           values = c("#a6a6a6", "#d1351b"),
           name = "Blood cultures"
-          
         )
       }
-    else {
-      scale_fill_manual(
-        values = c("#a6a6a6", "#f39c12"),
-        name = "Urine cultures"
-      )
-    }
+      else {
+        scale_fill_manual(
+          values = c("#a6a6a6", "#f39c12"),
+          name = "Urine cultures"
+        )
+      }
+    
+    plot + 
+      if(input$box5.1 == "year") {
+        geom_col(position = input$box5.2,
+                  color = "black",
+                  alpha = 0.8)
+      } else {
+        geom_area(position = input$box5.2,
+                  color = "black",
+                  alpha = 0.8)
+      }
   })
-  
+
   output$plot_dia_adm <- renderPlot({
-    if (req(input$tab) == "Diagnostics") {
       dia_adm()
-    }
-    else {
-      Sys.sleep(0)
-    }
   })
-  
-  
-  
-  # BOX DIAGNOSTICS - 2 -------------------------------------------------------
+
+  # timing plot
   
   plot_dia_timing <- reactive({
-    if (input$diagnosticsInput == "bc_timing") {
-      timing <- set_reac_1() %>%
-        filter(check == "Taken") %>%
-        group_by(bc_timing) %>%
-        summarise(n = n()) %>%
-        rename(timing = bc_timing)
-    }
-    else {
-      timing <- set_reac_1() %>%
-        filter(check == "Taken") %>%
-        group_by(uc_timing) %>%
-        summarise(n = n()) %>%
-        rename(timing = uc_timing)
-    }
     
-    ggplot(timing, aes(timing, y = n, fill = n)) +
+    test_timing <- set_reac_1() %>%
+      group_by(test_timing, check) %>%
+      summarise(n = n())
+    
+    ggplot(test_timing, aes(x = test_timing, y = n, fill = check)) +
       geom_bar(
-        stat = "identity", 
+        stat = "identity",
+        position = "stack",
         color = "black", 
         alpha = 0.8) +
-      labs(x = "Timing in relation to start of antimicrobials (in days)", y = "Count") +
-      guides(fill = "none") +
-      scale_fill_radar(discrete = FALSE, palette = "cool") +
-      theme_minimal()
+      scale_fill_manual(
+        breaks = c("Not taken", "Taken"), 
+        values = 
+          if (input$diagnosticsInput == "bc_timing") {
+            c("#a6a6a6", "#d1351b")
+          } else {
+            c("#a6a6a6", "#f39c12")
+          },
+        labels = c("Not selected", "Selected"),
+        name = "") + 
+      scale_x_continuous(breaks = c(0:10)) +
+      coord_cartesian(xlim = c(-1:10)) +
+      labs(x = "Days", y = "Count") +
+      theme_minimal() +
+      theme(plot.title = element_text(face = "bold", size = 12)) +
+      ggtitle("Timing in relation to start of antimicrobials")
   })
   
   output$plot_dia_timing <- renderPlot({
-    plot_dia_timing()
-    
+      plot_dia_timing()
+
   })
-  
-  
-  # BOX DIAGNOSTICS - 3 --------------------------------------------------------
-  
+
+
+  # BOX DIAGNOSTICS - 2 --------------------------------------------------------
+
   plot_dia_perform <- reactive({
     perform_all <- set_reac_1() %>%
       mutate(dia_perform_all = round(sum(check == "Taken") / n() * 100, 1)) %>%
-      dplyr::select(input$box7.1, dia_perform_all)
+      dplyr::select(input$box6.1, dia_perform_all)
     
     perform_group <- set_reac_1() %>%
-      group_by_(input$box7.1) %>%
+      group_by_(input$box6.1) %>%
       summarise(dia_perform = round(sum(check == "Taken") / n() * 100, 1)) %>%
       left_join(perform_all) %>%
       mutate(dia_perform_diff = dia_perform - dia_perform_all) %>%
       arrange(-dia_perform_diff) %>%
       distinct(.keep_all = TRUE)
-    
-    ggplot(perform_group, aes_string(
-      x = paste0("fct_inorder(factor(", input$box7.1, "))"), 
-      y = "dia_perform_diff", 
-      fill = "dia_perform_diff", 
-      text = paste0(input$box7.1))) +
+
+    ggplot(perform_group, 
+           aes_string(
+             x = paste0("reorder(", input$box6.1, ", dia_perform_diff)"), 
+             y = "dia_perform_diff", 
+             fill = "dia_perform_diff", 
+             text = paste0(input$box6.1))) +
       geom_hline(
         yintercept = 0, 
         linetype = 2, 
         color = "darkgrey") +
       geom_bar(
         stat = "identity", 
-        color = "black", 
-        size = 0.1, 
+        color = "black",
         alpha = 0.8) +
-      scale_fill_radar(discrete = FALSE, palette = "cool") +
+      scale_fill_continuous(high = "#706f6f", low = "#cccccc")+
       labs(
         y = paste0("Diff. from average [", perform_all[1, 2], "%]"), 
         x = "") +
       guides(fill = FALSE) +
+      coord_flip() +
       theme_minimal() +
-      if (input$box7.2 == "Show labels") {
-        theme(axis.text.x = element_text(angle = 90, hjust = 1), 
-              legend.position = "none")
-      }
-    else {
-      theme(axis.text.x = element_blank())
-    }
-    
-    style(
-      hide_legend(
-        ggplotly(tooltip = c("text", "value"))), 
-      hoverlabel = list(bgcolor = "white"))
+      theme(plot.title = element_text(face = "bold", size = 12)) +
+      ggtitle(
+        paste0("Diagnostic performed within ",
+               min(input$checkInput),
+               " and ",
+               max(input$checkInput),
+               " days \nfrom start of antimicrobials - comparison"))
   })
-  
-  output$plot_dia_perform <- renderPlotly({
+
+  output$plot_dia_perform <- renderPlot({
     plot_dia_perform()
   })
+  
+  # performance table
   
   output$dia_table <- DT::renderDataTable({
     datatable(
       set_reac_1() %>%
-        group_by_(input$box8.0, "check") %>%
+        group_by_(input$box6.3, "check") %>%
         tally() %>%
-        mutate(Proportion = paste0(round(n / sum(
-          n
-        ) * 100, 1), "%")),
+        mutate(Proportion = paste0(round(n / sum(n) * 100, 1), "%")),
       rownames = FALSE,
       colnames =
         c("Group",
@@ -1953,31 +2267,40 @@ server <- function(input, output, session) {
           },
           "n",
           "Proportion"),
+      extensions = "Buttons",
       options = list(
-        dom = "ftpr",
+        dom = 'Bfrtp',
+        buttons = c('csv', 'excel', 'pdf'),
         style = "bootstrap",
         lengthMenu = c(seq(5, 150, 5))
       )
     )
+
   })
   
+
+  # BOX DIAGNOSTICS - 3  ------------------------------------------------------------------
   
-  # BOX DIAGNOSTICS - 4  ------------------------------------------------------------------
-  
-  micro_plot <- reactive({ 
-    
-    micro_count <- set_reac_2() %>% ungroup()
-    micro_count <- 
-      micro_count %>%
-      group_by_("fullname", input$box8) %>%
-      summarise(n = n()) %>%
-      arrange(-n)
-    
-    micro_count <- micro_count[1:input$box8.1,]
-    
+    micro_plot <- reactive({ 
+      
+      micro_count <- 
+        test_results() %>% 
+        filter(
+          first_isolate == TRUE, 
+          material == 
+            if (input$diagnosticsInput == "bc_timing") {
+              "blood"
+            } else {
+              "urine"
+            }) %>% 
+        group_by_("fullname", input$box7.0) %>%
+        summarise(n = n()) %>%
+        arrange(-n)
+
+    micro_count <- micro_count[1:input$box7.1,]
     
     plot <- 
-      ggplot(micro_count, 
+      ggplot(micro_count,
              aes_string(
                x = paste0("reorder(fullname ,n)"), 
                y = "n", 
@@ -1986,150 +2309,463 @@ server <- function(input, output, session) {
         stat = "identity", 
         color = "black", 
         alpha = 0.8) +
-      scale_color_viridis(option = "A") +
+      scale_fill_continuous(high = "#706f6f", low = "#cccccc")+
       labs(x = NULL, y = "Count") +
       guides(fill = "none") +
       theme_minimal() +
-      coord_flip()
+      coord_flip() +
+      theme(plot.title = element_text(face = "bold", size = 12)) +
+      ggtitle(
+        paste0("Frequency of first isolates in ",
+               if (input$diagnosticsInput == "bc_timing") {
+                 "Blood cultures"
+               } else {
+                 "Urine cultures"
+               }))
     
-    if (input$box8 != "fullname") {
-      plot <- plot + facet_wrap(input$box8)
-    }
+      if (input$box7.0 != "fullname") {
+        plot <- plot + facet_wrap(input$box7.0)
+      }
     
     plot
   })
-  
+
   output$micro_plot <- renderPlot({
     micro_plot()
   })
   
+  # microorganisms table
   
-  
-  # BOX DIAGNOSTICS -  ADVANCED --------------------------------------------------------
-  
-  logreg <-
-    reactive({
-      glm(as.formula(paste0("as.factor(check) ~", paste(input$modelInput, collapse = "+"))),
-          data = set_reac_1(), family = binomial
-      )
-    })
-  
-  output$logreg <- renderPrint({
-    req(input$modelInput)
-    logreg <- tidy(logreg()) %>%
-      select(term, estimate, std.error, p.value) %>%
-      bind_cols(as.tibble(exp(coefficients(logreg())))) %>%
-      select(term, value, p.value, std.error) %>%
-      mutate_if(is.numeric, round, digits = 3) %>%
-      rename(Variable = term, OR = value, "p-value" = p.value)
+  micro_table <- reactive({
+    micro_table <- test_results() %>% 
+      filter(first_isolate == TRUE,
+             material == 
+               if (input$diagnosticsInput == "bc_timing") {
+                 "blood"
+               } else {
+                 "urine"
+               }) %>% 
+      group_by_("fullname", input$box7.2) %>%
+      summarise(n = n()) %>%
+      arrange(-n) %>% 
+      rename("Isolates" = "fullname")
     
-    logreg$Variable <- str_replace(
-      logreg$Variable,
-      pattern = paste(
-        c("ab_type", "ab_group", "specialty", "sub_specialty", "gender", "adm_route", "adm_weekday"),
-        collapse = "|"
-      ),
-      replacement = ""
+
+    if (input$box7.2 == "gender") {
+      micro_table <- micro_table %>% rename("Gender" = gender)
+    }
+    if (input$box7.2 == "year") {
+      micro_table <- micro_table %>% rename("Year" = year)
+    }
+    if (input$box7.2 == "specialty") {
+      micro_table <- micro_table %>% rename("Specialty" = specialty)
+    }
+    if (input$box7.2 == "sub_specialty") {
+      micro_table <- micro_table %>% rename("Subspecialty" = sub_specialty)
+    }
+    if (input$box7.2 == "adm_route") {
+      micro_table <- micro_table %>% rename("Admitting department" = adm_route)
+    } else {
+      micro_table <- micro_table
+    }
+    
+    datatable(
+      micro_table,
+      rownames = FALSE,
+      extensions = "Buttons",
+      options = list(
+        dom = 'Bfrtp',
+        buttons = c('csv', 'excel', 'pdf'),
+        style = "bootstrap",
+        lengthMenu = c(seq(5, 150, 5))
+        )
     )
-    logreg
   })
   
-  output$logreg_aic <- renderPrint({
-    req(input$modelInput)
-    glance(logreg())
+  output$micro_table <- DT::renderDataTable({
+    micro_table()
+  }, server = FALSE)
+  
+  # BOX DIAGNOSTICS - 4 -------------------------------------------------------
+  
+  isolate_data <- reactive({
+    test_results() %>% 
+      filter(
+        fullname == input$box8.1,
+        first_isolate == TRUE, 
+        material == 
+          if (input$diagnosticsInput == "bc_timing") {
+            "blood"
+          } else {
+            "urine"
+          }) 
   })
   
+  isolate_plot <- reactive({
+    
+    ts <- isolate_data() %>% 
+      dplyr::select(input$box8.0, input$box8.2) %>% 
+      group_by_(input$box8.0) %>% 
+      nest()
+    
+    if (length(input$box8.2) == 1) {
+      ts <- ts %>% mutate(Value = map(data, ~ count_df(.))) %>% 
+        select(-data) %>% 
+        unnest()
+    } else {
+      ts <- ts %>% 
+        mutate(Value = map(data, ~ count_R(.)),
+               Interpretation = "R") %>% 
+        select(-data) %>% 
+        unnest()
+    }
+    
+    plot <- 
+      ggplot(ts,
+             aes_string(input$box8.0, "Value", fill = "Interpretation")) +
+      geom_bar(
+        stat = "identity",
+        position = 
+          if (input$box8.0.1 == "Count") {
+            position_dodge() 
+          } else {
+            position_fill()
+          },
+        color = "black",
+        alpha = 0.8
+        ) +
+      scale_fill_manual(
+        limits = c("S", "I", "R"),
+        breaks = c("S", "I", "R"),
+        values = c("#21908CFF", "#FDE725FF", "#440154FF"),
+        na.value = "lightgrey"
+      ) +
+      ggtitle(
+        label =
+          paste(
+            "Selected isolate: ",
+            input$box8.1,
+            if (length(input$box8.2) == 1) {
+              "\nSelected antimicrobial: "
+            } else {
+              "\nCo-resistance to: "
+            },
+            paste(abname(c(input$box8.2)), collapse = " & ")
+          )
+      ) +
+      theme_minimal() +
+      theme(
+        legend.title = element_blank(),
+        legend.text = element_text(margin = margin(l = 5)),
+        axis.title.y = element_blank(), 
+        plot.title = element_text(face = "bold", size = 12)
+      ) +
+      if (input$box8.0 == "fullname") {
+        theme(axis.text.y = element_blank())
+      }
+    
+      if (input$box8.0.1 == "Proportion") {
+        plot +
+          scale_y_continuous(
+            breaks = seq(0,1,0.1), 
+            labels = scales::percent(seq(0, 1 ,0.1))
+          ) +
+          labs(y = "Percentage") +
+          coord_flip()
+      } else {
+        plot +
+          labs(y = "Count") +
+          coord_flip() 
+      }
+    
+  })
   
+  output$isolate_plot <- renderPlot({
+    validate(
+      need(input$box8.1, 'Please select isolate below'),
+      need(input$box8.2, 'Please select antimicrobial below')
+    )
+    isolate_plot()
+  })
+  
+  # over time
+  
+  isolate_ts <- reactive({
+    
+    col_select <- paste(c(input$box8.2, input$box8.3), sep = ",")
+    
+    ts <- isolate_data() %>% 
+      select(col_select) %>% 
+      group_by_(input$box8.3) %>%
+      nest()
+    
+    if (length(input$box8.2) == 1) {
+      ts <- ts %>% mutate(Value = map(data, ~ count_df(.))) 
+    } else {
+      ts <- ts %>% 
+        mutate(Value = map(data, ~ count_R(.)),
+               Interpretation = "R") 
+    }
+    
+    ts <- ts %>% 
+      select(-data) %>% 
+      unnest()
+
+    plot <- qic(
+      if (input$box8.3 == "year") {
+        year
+      } else {
+        if (input$box8.3 == "yearquarter_test") {
+          yearquarter_test
+        } else {
+          yearmonth_test
+        }
+      },
+      Value,
+      data = ts, 
+      agg.fun = "sum",
+      facets = ~ Interpretation,
+      ncol = 1
+    ) + 
+      labs(caption = "(Line represents median; if red-dotted = signal for non-random variation)") +
+      theme(strip.text = element_text(face = "bold"),
+            plot.title = element_text(face = "bold", size = 12),
+            plot.caption = element_text(size = 10, colour = "darkgrey"))
+   
+   if (input$box8.3 == "yearmonth_test") {
+     plot +scale_x_yearmon(n = length(ts$yearmonth_test)/12) +
+       labs(x = "Months", y = "Count") +
+       ggtitle(
+         paste0(input$box8.1, ": ",
+                if (length(input$box8.2) == 1) {
+                  ("Susceptibility to ")
+                } else {
+                  "Co-resistance to "
+                },
+                paste(abname(c(input$box8.2)), collapse = " & "), " - Count per month"
+         ))
+   } else {
+     if (input$box8.3 == "yearquarter_test") {
+       plot + scale_x_yearmon(n = length(ts$yearquarter_test)/12) +
+         labs(x = "Quarter", y = "Count") +
+         ggtitle(
+           paste0(input$box8.1, ": ",
+                  if (length(input$box8.2) == 1) {
+                    ("Susceptibility to ")
+                  } else {
+                    "Co-resistance to "
+                  },
+                  paste(abname(c(input$box8.2)), collapse = " & "), " - Count per quarter"
+           ))
+       
+     } else {
+       plot + scale_x_continuous(breaks = c(min(ts$year, na.rm = TRUE):max(ts$year, na.rm = TRUE))) +
+         labs(x = "Year", y = "Count") +
+         ggtitle(
+           paste0(input$box8.1, ": ",
+             if (length(input$box8.2) == 1) {
+               ("Susceptibility to ")
+             } else {
+               "Co-resistance to "
+             },
+             paste(abname(c(input$box8.2)), collapse = " & "), " - Count per year"
+           ))
+     }
+   }
+
+  })
+  
+  output$isolate_ts <- renderPlot({
+    validate(
+      need(input$box8.1, 'Please select isolate below'),
+      need(input$box8.2, 'Please select antimicrobial below')
+    )
+    isolate_ts()
+  })
+  
+  # isolates table
+  
+  isolate_table <- reactive({
+    
+    table <- isolate_data() %>% 
+      dplyr::select(input$box8.2, input$box8.7) %>% 
+      group_by_(input$box8.7) %>% 
+      nest()
+    
+    if (length(input$box8.2) == 1) {
+      table <- table %>% 
+        mutate(Value = map(data, 
+                           ~ if(input$box8.8 == "Count") {
+                             count_df(.)
+                           } else {
+                             portion_df(., as_percent = TRUE)
+                           })) %>% 
+        select(-data) %>% 
+        unnest() %>% 
+        rename(Antimicrobial = Antibiotic)
+    } else {
+      table <- table %>% 
+        mutate(Value = map(data, 
+                           ~ if(input$box8.8 == "Count") {
+                             count_R(.)
+                           } else {
+                             portion_R(., as_percent = TRUE)
+                           }),
+               Interpretation = "R", 
+               Antimicrobial = paste0(abname(c(input$box8.2)), collapse = " & ")) %>% 
+        select(-data) %>% 
+        unnest()
+    }
+    
+    table <- table %>% 
+      spread(Interpretation, Value) %>% 
+      mutate(Isolate = input$box8.1) %>% 
+      select(Group = input$box8.7, Isolate, everything()) 
+    
+    if (input$box8.7 == "yearmonth_test") {
+      table <- table %>%
+        mutate(Group = as.character(as.yearmon(Group)))
+    } 
+    if (input$box8.7 == "yearquarter_test") {
+      table <- table %>%
+        mutate(Group = as.character(as.yearqtr(Group)))
+    }
+   
+    if (input$box8.7 == "fullname") {
+      table <- table %>% 
+        select(-Isolate)
+    } else {
+      table 
+    }
+    
+    datatable(
+      table,
+      extensions = 'Buttons',
+      escape = FALSE,
+      rownames = FALSE, 
+      caption = 
+        if (length(input$box8.2) != 1) {
+          "Co-resistance"
+        } else { 
+          NULL 
+        },
+      fillContainer = TRUE,
+      options = list(
+        dom = 'Bfrtp',
+        buttons = c('csv', 'excel', 'pdf'))
+    )
+  })
+  
+  output$isolate_table <- DT::renderDataTable({
+    validate(
+      need(input$box8.1, 'Please select isolate below'),
+      need(input$box8.2, 'Please select isolate below')
+    )
+    isolate_table()
+  }, server = FALSE)
+
+
   # BOX OUTCOME - 1 -------------------------------------------------------------
-  
+
   plot_los <- reactive({
     p <-
       ggplot(set_reac_1()) +
       coord_cartesian(xlim = input$zoom) +
+      ggtitle("Length of stay - distribution") +
+      labs(x = "Days") +
       theme_minimal() +
       theme(
         legend.position = "bottom",
         legend.direction = "horizontal",
         legend.title = element_blank(),
+        plot.title = element_text(face = "bold", size = 12),
         axis.title.y = if (input$box_los1.3 == TRUE) {
           element_blank()
+        } else {
+          element_text(angle = 90)
         }
-      ) +
+      )
+    
       if (input$box_los1.3 == TRUE) {
-        geom_density_ridges(
+        p <- p +geom_density_ridges(
           aes_string(
             x = "LOS",
-            y = input$box_los1,
-            group = input$box_los1,
-            fill = paste(as.factor(input$box_los1)),
+            y = input$box_los1.0,
+            fill = input$box_los1.0,
             height = "..density.."
           ),
-          alpha = 0.3
+          alpha = 0.6
         )
       } else {
-        geom_density(
+        if (input$box_los1.2) {
+          p <- p + geom_histogram(
+            aes_string(
+              x = "LOS",
+              fill = input$box_los1.0
+            ),
+            alpha = 0.6,
+            binwidth = 1,
+            position = "dodge",
+            color = "black"
+          ) +
+            labs(y = "Count")
+        } else {
+        p <- p + geom_density(
           aes_string(
             x = "LOS",
-            group = input$box_los1,
-            fill = paste(as.factor(input$box_los1))
+            fill = input$box_los1.0
           ),
           position = "identity",
           alpha = 0.3,
           bw = 1
+        ) + labs(y = "Density")
+        }
+      }
+
+    if(input$box_los1.0 == "check"){
+      p <-
+        p + if (input$diagnosticsInput == "bc_timing") {
+        scale_fill_manual(
+          values = c("#a6a6a6", "#d1351b"),
+          name = "Blood cultures"
         )
       }
-    
-    if(input$box_los1 == "check"){
-      p <- 
-        p + if (input$diagnosticsInput == "bc_timing") {
-          scale_fill_manual(
-            values = c("#a6a6a6", "#d1351b"),
-            name = "Blood cultures"
-          )
-        }
       else {
         scale_fill_manual(
           values = c("#a6a6a6", "#f39c12"),
           name = "Urine cultures"
         )
       }
+    } else {
+      if (input$box_los1.0 == "1") {
+        p <- p + scale_fill_continuous(low = "darkblue", high = "darkblue")
+      } else {
+        p <- p + scale_fill_viridis_d()
+      }
     }
-    if ( input$box_los1 == "1") {
-      p <- p + scale_fill_continuous(low = "lightgrey", high = "lightgrey")
-    }
-    if (!(input$box_los1 %in% c("1", "check"))) {
-      p <- p + scale_fill_manual(values = viridis(n_distinct(set %>% select_(input$box_los1))))
-    }
+
     if (input$box_los1.1 == FALSE) {
       p <- p + guides(fill = FALSE)
     }
-    if(input$box_los1.2 == TRUE & input$box_los1.3 != TRUE) {
-      p <- p + geom_histogram(
-        aes_string(y = "..density.."),
-        alpha = 0.6,
-        binwidth = 1,
-        position = "dodge",
-        color = "black"
-      )
-    }
     p
   })
-  
+
   output$plot_los <- renderPlot({
     plot_los()
   })
-  
-  
+
+
   # BOX OUTCOME - 2 -------------------------------------------------------------
-  
+
   kaplan_los <- reactive({
     
     kaplan_set <- set_reac_1() %>% 
       mutate(status = if_else(death_during_adm == FALSE, 1, 0))
     
+    if (input$box_los1.0 != 1) {
     ggsurvplot(
       surv_fit(as.formula(
-        paste0("Surv(LOS, event = status)", "~", input$box_los1)),
+        paste0("Surv(LOS, event = status)", "~", input$box_los1.0)),
         data = kaplan_set),
       data = kaplan_set,
       color = "strata",
@@ -2138,10 +2774,10 @@ server <- function(input, output, session) {
       pval.method = TRUE,
       break.time.by = 5,
       palette = {
-        if (input$box_los1 == "1") {
+        if (input$box_los1.0 == "1") {
           c("lightgrey")
         }
-        if (input$box_los1 == "check") {
+        if (input$box_los1.0 == "check") {
           if (input$diagnosticsInput == "bc_timing") {
             c("#a6a6a6", "#d1351b")
           }
@@ -2149,9 +2785,9 @@ server <- function(input, output, session) {
             c("#a6a6a6", "#f39c12")
           }
         }
-        else{
-          viridis(n_distinct(set %>% select_(input$box_los1)))
-        }
+        else {
+          viridis(n_distinct(set_reac_1() %>% select(input$box_los1.0)))
+          }
       },
       ylab = "Probablility to stay in hospital",
       xlab = "Length of stay (days)",
@@ -2162,20 +2798,25 @@ server <- function(input, output, session) {
       xlim = input$zoom, # 20 for show purposes
       break.x.by = 5
     )
+    } else {
+      NULL
+    }
   })
-  
+
   output$kaplan_los <- renderPlot({
+    validate(
+      need(!is.null(kaplan_los()), 'Please select at least two groups in box (left)'),
+      need(length(unique(kaplan_los()$plot$data$strata)) <= 5, 'Max. number of groups = 5; please adjust selection')
+    )
     kaplan_los()
   })
   
-  
+
   # BOX OUTCOME - 3 -------------------------------------------------------------
-  
+
   table_los <- reactive({
-    set_table <- set_reac_1()
-    set_table$gender <- factor(set_table$gender, levels = c("M", "F"), labels = c("Male", "Female"))
     
-    set_table <- set_table %>%
+    set_table <- set_reac_1() %>%
       group_by_(input$box_los3) %>%
       summarise(
         "Mean LOS" = round(mean(LOS), 1),
@@ -2187,7 +2828,7 @@ server <- function(input, output, session) {
       mutate(Proportion = paste((round(
         n / sum(n) * 100, 1
       )), "%"))
-    
+
     if (input$diagnosticsInput == "bc_timing" & input$box_los3 == "check") {
       set_table <- set_table %>% rename("Blood cultures" = check)
     }
@@ -2202,7 +2843,7 @@ server <- function(input, output, session) {
     }
     if (input$box_los3 == "ab_group") {
       set_table <- set_table %>% rename("Antimicrobial - Groups" = ab_group)
-    }
+      }
     if (input$box_los3 == "ab_type") {
       set_table <- set_table %>% rename("Antimicrobials" = ab_type)
     }
@@ -2215,81 +2856,55 @@ server <- function(input, output, session) {
     if (input$box_los3 == "adm_route") {
       set_table <- set_table %>% rename("Admitting department" = adm_route)
     }
-    
-    datatable(set_table, rownames = FALSE, fillContainer = TRUE, options = list(
-      dom = "tpr",
-      style = "bootstrap"
-    ))
+
+    datatable(
+      set_table, 
+      rownames = FALSE, 
+      extensions = "Buttons",
+      options = list(
+        dom = 'Bfrtp',
+        buttons = c('csv', 'excel', 'pdf'),
+        style = "bootstrap",
+        lengthMenu = c(seq(5, 150, 5))
+        )
+      )
   })
-  
+
   output$table_los <- DT::renderDataTable({
     table_los()
-  })
-  
-  
-  
-  # BOX OUTCOME - ADVANCED -------------------------------------------------------------
-  
-  fml_cox <- reactive({
-    as.formula(paste0(
-      "Surv(LOS, event = status)",
-      "~",
-      paste(input$coxInput, collapse = "+")
-    )) 
-  })
-  
-  coxreg <- reactive({
-    coxph(fml_cox(), data = set_reac_1())
-  })
-  
-  output$coxreg <- renderPrint({
-    req(input$coxInput)
-    coxreg <- tidy(coxreg()) %>% 
-      select(term, estimate, std.error, p.value) %>%
-      bind_cols(as.tibble(exp(coefficients(coxreg())))) %>%
-      select(term, value, p.value, std.error) %>%
-      mutate_if(is.numeric, round, digits = 3) %>%
-      rename(Variable = term, HR = value, "p-value" = p.value)
-    coxreg$Variable <- str_replace(
-      coxreg$Variable,
-      pattern = paste(
-        c("check", "ab_type", "ab_group", "specialty", "sub_specialty", "gender", "adm_route", "adm_weekday", "check"),
-        collapse = "|"
-      ),
-      replacement = ""
-    )
-    coxreg
-  })
-  
-  output$coxreg_aic <- renderPrint({
-    req(input$coxInput)
-    glance(coxreg())
-  })
-  
-  
+  }, server = FALSE)
+
+
   # DOWNLOAD ----------------------------------------------------------------
-  
+
   output$downloadData <- downloadHandler(
     filename = function() {
-      paste(input$filename, ".csv", sep = "")
+      paste(input$filename, "_anti_add_", Sys.Date(), ".csv", sep = "")
     },
     content = function(file) {
-      write.csv(set_base(), file, row.names = FALSE)
+      write_csv(set_base(), file)
     }
   )
   
-  
+  output$downloadMicroData <- downloadHandler(
+    filename = function() {
+      paste(input$filename, "_microbiology_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write_csv(test_results(), file)
+    }
+  )
+
   download_box <- function(exportname, plot) {
     downloadHandler(
       filename = function() {
         paste(exportname, Sys.Date(), ".png", sep = "")
       },
       content = function(file) {
-        ggsave(file, plot = plot, device = "png")
+        ggsave(file, plot = plot, device = "png", width = 8)
       }
     )
   }
-  
   
   output$down_age_select <- download_box("pat_age", plot_age_select())
   output$down_year_select <- download_box("pat_year", plot_year_select())
@@ -2298,9 +2913,14 @@ server <- function(input, output, session) {
   output$down_box_3 <- download_box("DOT_groups", plot_DOT_all())
   output$down_box_5 <- download_box("diagnostics_year", dia_adm())
   output$down_box_6 <- download_box("diagnostics_timing", plot_dia_timing())
-  output$down_box8 <- download_box("mircoorganisms", micro_plot())
-  output$down_box_los1 <- download_box("los_groups", plot_los()) 
+  output$down_box_7 <- download_box("diagnostics_perform", plot_dia_perform())
+  output$down_box_micro <- download_box("first_isolates", micro_plot())
+  output$down_box_res <- download_box("resistance", isolate_plot())
+  output$down_box_res_ts <- download_box("resistance_time", isolate_ts())
+  output$down_box_ddd_ts <- download_box("ddd time", ddd_ts())
+  output$down_box_dot_ts <- download_box("dot time", dot_ts())
+  output$down_box_los1.0 <- download_box("los_groups", plot_los()) 
   output$down_box_los2 <- download_box("km-curve", kaplan_los()$plot)
-  
-  
+
+                                       
 }

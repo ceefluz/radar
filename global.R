@@ -9,11 +9,13 @@
 required_packages <- c(
   "AMR",
   "broom",
+  "data.table",
   "DT",
   "ggrepel",
   "ggridges",
   "lubridate",
   "plotly",
+  "qicharts2",
   "RColorBrewer",
   "rintrojs",
   "shiny",
@@ -23,12 +25,13 @@ required_packages <- c(
   "shinyjqui",
   "shinyjs",
   "shinyWidgets",
-  "sjPlot", 
+  "sjPlot",
   "survival",
   "survminer",
   "tidyverse",
-  "viridis"
-) 
+  "viridis",
+  "zoo"
+)
 
 # install missing packages
 
@@ -36,102 +39,159 @@ new.packages <- required_packages[!(required_packages %in% installed.packages()[
 
 if (length(new.packages)) {
   install.packages(new.packages)
-} 
+}
 
 # load all packages
 lapply(required_packages, require, character.only = TRUE)
 
 
-# LOAD DATASET ------------------------------------------------------------
+# DATA TRANSFORMATION AND NEW VARIABLES -----------------------------------
 
-set <- read_csv("") # Fill in path of dataset for analysis!
+admissions <- read_csv()
+antimicrobials <- read_csv()
+microbiology <- read_csv()
 
-ab <- set %>%
-  filter(!is.na(ab_type)) %>% 
+admissions <- admissions %>%
+  mutate(year = year(adm_start_date),
+         yearmonth_adm = as.yearmon(adm_start_date),
+         yearquarter_adm = as.yearqtr(adm_start_date),
+         LOS = as.integer(adm_end_date - adm_start_date + 1),
+         age = as.integer(year(adm_start_date) - year(birth_date)))
+
+
+# microbiology
+
+microbiology <- microbiology %>%
+  mutate_if(is.rsi.eligible, as.rsi) %>%
+  mutate(mo = as.mo(mo)) %>%
+  left_join(microorganisms %>% select(mo, fullname, family)) %>%
+  mutate(yearmonth_test = as.yearmon(test_date),
+         yearquarter_test = as.yearqtr(test_date))
+
+microbiology <- microbiology %>%
+  group_by(material) %>%
+  nest() %>%
+  mutate(data =
+           map(
+             data,
+             ~ mutate(
+               .x,
+               first_isolate =
+                 AMR::first_isolate(
+                   tbl = .,
+                   col_date = "test_date",
+                   col_patient_id = "id",
+                   col_mo = "mo"
+                 )
+             )
+           )
+  ) %>%
+  unnest()
+
+
+# Join datasets by overlaping time intervals
+
+pat <- admissions %>% as.data.table()
+anti <- antimicrobials %>% as.data.table()
+micro <- microbiology %>% as.data.table()
+
+anti <- anti[
+  pat,
+  on = .(id, ab_start_date >= adm_start_date, ab_stop_date <= adm_end_date),
+  .(id, ab_start_date = x.ab_start_date, ab_stop_date = x.ab_stop_date, adm_start_date, adm_end_date, atc_code, ddd_per_day, ab_route),
+  nomatch = 0L
+  ]
+
+micro <- micro[
+  pat,
+  on = .(id, test_date >= adm_start_date, test_date <= adm_end_date),
+  .(id, test_date = x.test_date, bc_number, adm_start_date, adm_end_date),
+  nomatch = 0L
+  ]
+
+anti_first <- anti %>%
+  group_by(id) %>%
+  summarise(min_ab_start = min(ab_start_date)) # first prescription date
+
+timing <- micro %>%
+  left_join(anti_first) %>%
+  mutate(test_timing = as.integer(test_date - min_ab_start)) %>%
+  group_by(id) %>%
+  filter(test_timing == min(test_timing, na.rm = FALSE)) %>%
+  ungroup() %>%
+  select(id, test_timing) %>%
+  distinct()
+
+admissions <- admissions %>%
+  left_join(timing)
+
+microbiology <- microbiology %>%
+  semi_join(micro)
+
+microbiology <- microbiology %>%
+  left_join(micro) %>%
+  select(-c(specialty)) %>%
+  left_join(admissions)
+
+antimicrobials <- antimicrobials %>%
+  semi_join(anti) %>%
+  left_join(admissions)
+
+antimicrobials <- antimicrobials %>%
+  mutate(ab_days = as.integer(ab_stop_date - ab_start_date),
+         ab_first = if_else(ab_start_date == adm_start_date, TRUE, FALSE),
+         ab_timing = as.integer(ab_start_date - adm_start_date),
+         ddd_per_prescription = ddd_per_day*ab_days) %>%
+  left_join(
+    AMR::antibiotics %>%
+      select(
+        atc_code = atc, ab_type = official, ab_group = atc_group2
+      ), by = "atc_code") %>%
+  group_by(id) %>%
+  mutate(ddd_total = sum(ddd_per_prescription)) %>%
+  ungroup()
+
+continuous_treatment_duration <- antimicrobials %>% as.data.table()
+
+continuous_treatment_duration <-
+  continuous_treatment_duration[, {
+    ind <- rleid((ab_start_date - shift(ab_stop_date, fill = Inf)) > 0) == 1
+    .(ab_start_cont = min(ab_start_date[ind]),
+      ab_stop_cont  = max(ab_stop_date[ind]))}
+    , by = c("id")] %>%
+  .[, ab_days_all := as.integer(ab_stop_cont - ab_start_cont + 1)]
+
+antimicrobials <- antimicrobials %>%
+  left_join(continuous_treatment_duration)
+
+
+
+# antimicrobial count for select input in ui.R
+
+ab <- antimicrobials %>%
+  filter(!is.na(ab_type)) %>%
   group_by(ab_type) %>%
   summarise(n = n()) %>%
   arrange(desc(n)) %>%
   filter(!is.na(ab_type)) %>%
   distinct()
 
-ab_groups <- set %>% 
-  filter(!is.na(ab_group)) %>% 
-  select(ab_group) %>% 
-  arrange(ab_group) %>% 
+ab_groups <- antimicrobials %>%
+  filter(!is.na(ab_group)) %>%
+  select(ab_group) %>%
+  arrange(ab_group) %>%
   distinct()
 
 
-update_ab <- set %>% 
-  select(ab_type, ab_group) %>% 
+update_ab <- antimicrobials %>%
+  select(ab_type, ab_group) %>%
   distinct(.keep_all = TRUE)
-
-set$year <- as.factor(set$year)
-
-
 
 
 # HELP & INTRO DATA ---------------------------------------------------------------
 
 steps <- read_csv2("help.csv")
 intro <- read_csv2("intro.csv")
-
-# SET COLORS --------------------------------------------------------------
-
-radar_colors <- c(
-  red = "#d33724",
-  green = "#00b159",
-  blue = "#00aedb",
-  orange = "#f39c12",
-  yellow = "#ffc425",
-  lightgrey = "#cccccc",
-  darkgrey = "#8c8c8c",
-  bluegrey = "#42465e",
-  male = "#d1351b", 
-  female = "#f39c12"
-)
-
-
-radar_cols <- function(...) {
-  
-  cols <- c(...)
-  
-  if (is.null(cols)) {
-    radar_colors
-  } else {
-    radar_colors[cols]  
-  }
-  
-}
-
-radar_palettes <- list(
-  main  = radar_cols("blue", "green", "yellow"),
-  cool  = radar_cols("blue", "green"),
-  hot   = radar_cols("yellow", "red"),
-  blue  = radar_cols("blue", "yellow"),
-  mixed = radar_cols("blue", "green", "yellow", "orange", "red"),
-  grey  = radar_cols("lightgrey", "bluegrey"),
-  gender = radar_cols("gender")
-)
-
-radar_pal <- function(palette = "mixed", reverse = FALSE, ...) {
-  pal <- radar_palettes[[palette]]
-  
-  if (reverse) {
-    pal <- rev(pal)
-  }
-  
-  colorRampPalette(pal, ...) 
-}
-
-scale_fill_radar <- function(palette = "mixed", discrete = TRUE, reverse = FALSE, ...) {
-  pal <- radar_pal(palette = palette, reverse = reverse)
-  
-  if (discrete == TRUE) {
-    discrete_scale("fill", paste0("radar_", palette), palette = pal, ...)
-  } else {
-    scale_fill_gradientn(colours = pal(256), ...)
-  }
-}
 
 
 # FLUID DESIGN FUNCTION ---------------------------------------------------
