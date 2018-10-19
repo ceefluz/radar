@@ -17,42 +17,57 @@ RadaR works with standard csv-files (.csv). The variables needed for RadaR are a
 
 | Variable             	| Detail                                                                           	|
 |----------------------	|----------------------------------------------------------------------------------	|
-| ab_days              	| Duration of single prescription in days                                          	|
-| ab_days_all          	| Duration of overall antimicrobial treatment                                      	|
-| ab_first             	| First antimicrobial (TRUE/FALSE)                                                 	|
-| ab_group             	| Antimicrobial group according to ATC classification                              	|
 | ab_route             	| Route of administration                                                          	|
-| ab_start_all         	| Start of treatment (YYYY-MM-DD)                                                  	|
 | ab_start_date        	| Start of prescription (YYYY-MM-DD)                                               	|
-| ab_stop_all          	| Stop of treatment (YYYY-MM-DD)                                                   	|
 | ab_stop_date         	| End of prescription (YYYY-MM-DD)                                                 	|
-| ab_timing            	| Difference in days between start of admission and start of antimicrobial therapy 	|
-| ab_type              	| Name of antimicrobial                                                            	|
 | adm_end_date         	| End of admission (YYYY-MM-DD)                                                    	|
 | adm_route            	| Admitting department                                                             	|
 | adm_start_date       	| Start of admission (YYYY-MM-DD)                                                  	|
-| adm_weekday          	| Weekday (TRUE/FALSE)                                                             	|
-| age                  	| Patients' age                                                                    	|
 | atc_code             	| ATC code of antimicrobial                                                        	|
-| bc_date              	| Time of the first blood culture (YYYY-MM-DD)                                     	|
 | birth_date           	| Birth date (YYYY-MM-DD)                                                          	|
 | ddd_per_prescription 	| Defined daily dose per prescription                                              	|
-| ddd_sum              	| Defined daily dose for all antimicrobials per treatment                          	|
-| fullname             	| Microbiological test result (if available)                                       	|
 | gender               	| Gender                                                                           	|
 | id                   	| Patient ID or study ID                                                           	|
-| LOS                  	| Length of stay                                                                   	|
 | material             	| Microbiological test material                                                    	|
-| patient_death        	| Death during hospital stay (TRUE/FALSE)                                          	|
 | specialty            	| General specialty (Internal medicine, Surgery, Other)                            	|
 | sub_specialty        	| Subspecialty                                                                     	|
 | test_date            	| Microbiological test date                                                        	|
-| uc_date              	| Date of the first urine culture                                                  	|
-| uc_timing            	| Difference in days between start of antimicrobials and first urine culture       	|
-| year                 	| Year                                                                             	|
-| yearquarter          	| Year and quarter (YYYY-Q)                                                        	|
 
-Usually different data sources need to be merged for the desired result (at our institution three different sources: general data warehouse, pharmacy data, microbiology data). For an easy and rapid creating process of the needed datasets that can be loaded into RadaR, an additional R-package will soon be available here in this github repository.
+### Input variables for **RadaR**
+#### Admission data
+| Variable             	| Detail                                                                           	|
+|----------------------	|----------------------------------------------------------------------------------	|
+| adm_end_date | End of admission (YYYY-MM-DD)   |
+| adm_route | Admitting department |
+| adm_start_date | Start of admission (YYYY-MM-DD)  |
+| birth_date | Birth date (YYYY-MM-DD)  |
+| death_during_adm | Death during admission (TRUE/FALSE) |
+| gender | Gender |
+| id | Patient ID or study ID |
+| specialty | General specialty (internal medicine, surgery, other) |
+| sub_specialty | Sub-specialty |
+
+#### Antimicrobial consumption data
+| Variable             	| Detail                                                                           	|
+|----------------------	|----------------------------------------------------------------------------------	|
+| ab_route | Administration route (e.g. IV, oral, ...) |
+| ab_start_date| Start of antimicrobial treatment (YYYY-MM-DD) |
+| ab_stop_date| Stop of antimicrobial treatment (YYYY-MM-DD) |
+| atc_code| ATC code according WHO ATC classification system |
+| ddd_per_day| Defined daily dose of antimicrobial according to WHO ATC classification system |
+| id| Patient ID or study ID  |
+
+#### Microbiological data
+| Variable             	| Detail                                                                           	|
+|----------------------	|----------------------------------------------------------------------------------	|
+| test_number | Test number |
+| id | Patient ID or study ID |
+| material | Test material (currently supported: blood and urine) |
+| specialty | Ordering specialty |
+| test_date  | Test date (YYYY-MM-DD) |
+| antimicrobial susceptibility testing | Several columns of tested antimicrobial agents (e.g. amox, cipr etc.) with resistance results (R / I / S) |
+
+These data will be loaded, merged, and transformed for analysis upon start of RadaR
 
 ## Privacy and storage
 RadaR works with sensitive hospital data and is based on single observations on the patient level. All data for the running [example](https://ceefluz.shinyapps.io/radar/) is simulated and don't represent any real patients. 
