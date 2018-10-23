@@ -8,7 +8,6 @@
 
 required_packages <- c(
   "AMR",
-  "broom",
   "data.table",
   "DT",
   "ggrepel",
@@ -47,9 +46,9 @@ lapply(required_packages, require, character.only = TRUE)
 
 # DATA TRANSFORMATION AND NEW VARIABLES -----------------------------------
 
-admissions <- read_csv() # add path here
-antimicrobials <- read_csv() # add path here
-microbiology <- read_csv() # add path here
+admissions <- read_csv("admissions_sample_181019.csv")
+antimicrobials <- read_csv("antimicrobials_sample_181019.csv")
+microbiology <- read_csv("microbiology_sample_181019.csv")
 
 admissions <- admissions %>%
   mutate(year = year(adm_start_date),
@@ -139,7 +138,6 @@ antimicrobials <- antimicrobials %>%
 
 antimicrobials <- antimicrobials %>%
   mutate(ab_days = as.integer(ab_stop_date - ab_start_date),
-         ab_first = if_else(ab_start_date == adm_start_date, TRUE, FALSE),
          ab_timing = as.integer(ab_start_date - adm_start_date),
          ddd_per_prescription = ddd_per_day*ab_days) %>%
   left_join(
@@ -148,7 +146,8 @@ antimicrobials <- antimicrobials %>%
         atc_code = atc, ab_type = official, ab_group = atc_group2
       ), by = "atc_code") %>%
   group_by(id) %>%
-  mutate(ddd_total = sum(ddd_per_prescription)) %>%
+  mutate(ddd_total = sum(ddd_per_prescription, na.rm = TRUE),
+         ab_first = if_else(ab_start_date == min(ab_start_date, na.rm = TRUE), TRUE, FALSE)) %>%
   ungroup()
 
 continuous_treatment_duration <- antimicrobials %>% as.data.table()
