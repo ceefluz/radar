@@ -97,28 +97,28 @@ micro <- microbiology %>% as.data.table()
 anti <- anti[
   pat,
   on = .(id, ab_start_date >= adm_start_date, ab_stop_date <= adm_end_date),
-  .(id, ab_start_date = x.ab_start_date, ab_stop_date = x.ab_stop_date, adm_start_date, adm_end_date, atc_code, ddd_per_day, ab_route),
+  .(id, adm_id, ab_start_date = x.ab_start_date, ab_stop_date = x.ab_stop_date, adm_start_date, adm_end_date, atc_code, ddd_per_day, ab_route),
   nomatch = 0L
   ]
 
 micro <- micro[
   pat,
   on = .(id, test_date >= adm_start_date, test_date <= adm_end_date),
-  .(id, test_date = x.test_date, test_number, adm_start_date, adm_end_date),
+  .(id, adm_id, test_date = x.test_date, test_number, adm_start_date, adm_end_date),
   nomatch = 0L
   ]
 
 anti_first <- anti %>%
-  group_by(id) %>%
+  group_by(id, adm_id) %>%
   summarise(min_ab_start = min(ab_start_date)) # first prescription date
 
 timing <- micro %>%
   left_join(anti_first) %>%
   mutate(test_timing = as.integer(test_date - min_ab_start)) %>%
-  group_by(id) %>%
+  group_by(id, adm_id) %>%
   filter(test_timing == min(test_timing, na.rm = FALSE)) %>%
   ungroup() %>%
-  select(id, test_timing) %>%
+  select(id, adm_id, test_timing) %>%
   distinct()
 
 admissions <- admissions %>%
@@ -145,7 +145,7 @@ antimicrobials <- antimicrobials %>%
       select(
         atc_code = atc, ab_type = official, ab_group = atc_group2
       ), by = "atc_code") %>%
-  group_by(id) %>%
+  group_by(id, adm_id) %>%
   mutate(ddd_total = sum(ddd_per_prescription, na.rm = TRUE),
          ab_first = if_else(ab_start_date == min(ab_start_date, na.rm = TRUE), TRUE, FALSE)) %>%
   ungroup()
@@ -157,7 +157,7 @@ continuous_treatment_duration <-
     ind <- rleid((ab_start_date - shift(ab_stop_date, fill = Inf)) > 0) == 1
     .(ab_start_cont = min(ab_start_date[ind]),
       ab_stop_cont  = max(ab_stop_date[ind]))}
-    , by = c("id")] %>%
+    , by = c("id", "adm_id")] %>%
   .[, ab_days_all := as.integer(ab_stop_cont - ab_start_cont + 1)]
 
 antimicrobials <- antimicrobials %>%
