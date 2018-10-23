@@ -79,11 +79,22 @@ ui <- dashboardPage(
           "START OF ANTIMICROBIALS \n (IN RELATION TO START OF ADMISSION)",
           sliderInput(
             inputId = "ab_timingInput",
-            label = "",
+            label = NULL,
             min = 0,
             max = 10,
             value = c(0, 1),
             step = 1
+          ),
+          switchInput(
+            inputId = "ab_anyInput",
+            label = "SELECTION",
+            value = TRUE, 
+            onLabel = "SLIDER", 
+            offLabel = "ANY", 
+            inline = TRUE, 
+            size = "mini", 
+            width = "100%", 
+            offStatus = "danger"
           )
         ),
         menuItem(
@@ -247,7 +258,7 @@ ui <- dashboardPage(
       br(),
       br(),
       menuItem(
-        "ADMITTING DEPARTMENT",
+        "ORIGIN",
         tabName = "admission",
         icon = icon("ambulance"),
         checkboxGroupInput(
@@ -285,7 +296,7 @@ ui <- dashboardPage(
         icon = icon("download"),
         textInput(
           inputId = "filename",
-          placeholder = "Name download file",
+          placeholder = "Not availalbe in demo mode",
           label = ""
         ),
         div(
