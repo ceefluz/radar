@@ -26,7 +26,7 @@ server <- function(input, output, session) {
   })
   
   # base set with sidebar input: adminstration route, first prescription, antimicrobials, max use all, max use single
-  # Admitting department, year, specialty, subspecialty (not excluded), age, gender,
+  # origin, year, specialty, subspecialty (not excluded), age, gender,
 
   # Filtering the dataset based on the selection from the sidebar
 
@@ -37,7 +37,7 @@ server <- function(input, output, session) {
         filter(
           ab_route %in% input$adminInput, # route of intake: IV, oral or both
           ab_first %in% c(input$firstInput, TRUE), # select first prescriptions or all
-          ab_timing %in% min(input$ab_timingInput):max(input$ab_timingInput), # time interval of treatment start
+          ab_timing %in% c(min(input$ab_timingInput):max(input$ab_timingInput)), # time interval of treatment start
           ab_type %in% input$abInput, # select antimicrobials
           ab_days %in% if (input$ab_any_singleInput == TRUE) { # treatment duration of ...
               input$ab_singleInput # ... single antimicrobial
@@ -48,7 +48,7 @@ server <- function(input, output, session) {
             } else {
               c(1:max(input$ab_allInput))
             },
-          adm_route %in% input$admissionInput, # admitting department
+          adm_route %in% input$admissionInput, # origin
           year %in% c(min(input$yearInput):max(input$yearInput)), # years selected
           specialty %in% input$specInput, # specialty groups (surgery, ...)
           !(sub_specialty %in% input$exInput), # exclude single specialties
@@ -66,7 +66,7 @@ server <- function(input, output, session) {
       # filter minimum number per subspecialty
 
       set_base_n <- set_base %>%
-        distinct(id, .keep_all = TRUE) %>%
+        distinct(id, adm_id, .keep_all = TRUE) %>%
         group_by(sub_specialty) %>%
         summarise(n = n()) %>%
         filter(n >= input$nInput)
@@ -79,7 +79,7 @@ server <- function(input, output, session) {
   test_results <- reactive({
     input$confirm
     isolate(
-      microbiology %>% semi_join(set_base(), by = c("id"))
+      microbiology %>% semi_join(set_base(), by = c("id", "adm_id"))
     )
   })
 
@@ -88,7 +88,7 @@ server <- function(input, output, session) {
     input$confirm
     isolate(
     set_base() %>%
-      distinct(id, .keep_all = TRUE)
+      distinct(id, adm_id, .keep_all = TRUE)
     )
   })
 
@@ -105,7 +105,7 @@ server <- function(input, output, session) {
   # UI - GENERAL --------------------------------------------------------------
 
   
-  show intro modal
+  #show intro modal
   observeEvent("", {
     showModal(modalDialog(
       includeHTML("intro_text.html"),
@@ -204,7 +204,31 @@ server <- function(input, output, session) {
   })
   
   # gray out slider input when input "any" in antimicrobial selection
-observeEvent(input$ab_any_allInput, {
+  observeEvent(input$ab_anyInput, {
+    if (input$ab_anyInput == FALSE) {
+      disable("ab_timingInput")
+      updateSliderInput(session,
+                        inputId = "ab_timingInput",
+                        label = NULL,
+                        value = c(0, max(antimicrobials$ab_timing, na.rm = TRUE)),
+                        min = 0,
+                        max = max(antimicrobials$ab_timing, na.rm = TRUE),
+                        step = 1
+      )
+    } else {
+      enable("ab_timingInput")
+      updateSliderInput(session,
+                        inputId = "ab_timingInput",
+                        label = NULL,
+                        value = c(0, 1),
+                        min = 0,
+                        max = 10,
+                        step = 1
+      )
+    }
+  })
+  
+  observeEvent(input$ab_any_allInput, {
   if (input$ab_any_allInput == FALSE) {
     disable("ab_allInput")
     updateSliderInput(session,
@@ -424,7 +448,7 @@ observeEvent(input$tab, {
       paste("Total number of admissions:", 
             strong(
               unique(
-                paste(set_reac_1()$id) %>% 
+                paste(set_reac_1()$id, set_reac_1()$adm_id) %>% 
                   length()
               )
             )
@@ -590,7 +614,7 @@ observeEvent(input$tab, {
               radioGroupButtons(
                 inputId = "box2.3",
                 label = "Select grouping", 
-                choiceNames = c("None", "Specialty", "Sub-specialty", "Admitting department"),
+                choiceNames = c("None", "Specialty", "Sub-specialty", "Origin"),
                 choiceValues = c("none", "specialty", "sub_specialty", "adm_route"),
                 selected = "none",
                 direction = "vertical"
@@ -675,7 +699,7 @@ observeEvent(input$tab, {
                 radioGroupButtons(
                   inputId = "box3.3",
                   label = "Select grouping", 
-                  choiceNames = c("None", "Specialty", "Sub-specialty", "Admitting department"),
+                  choiceNames = c("None", "Specialty", "Sub-specialty", "Origin"),
                   choiceValues = c("NULL", "specialty", "sub_specialty", "adm_route"),
                   selected = "NULL",
                   direction = "vertical"
@@ -752,7 +776,7 @@ observeEvent(input$tab, {
                 radioGroupButtons(
                   inputId = "box4.0",
                   label = "Select group", 
-                  choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Subspecialty", "Origin"),
                   choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
                   selected = "ab_type", 
                   direction = "vertical"
@@ -927,7 +951,7 @@ observeEvent(input$tab, {
                 radioGroupButtons(
                   inputId = "box6.1",
                   label = "Select group", 
-                  choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceNames = c("Antimicrobial - Groups", "Antimicrobials", "Year", "Specialty", "Subspecialty", "Origin"),
                   choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
                   selected = "year", 
                   direction = "vertical"
@@ -961,7 +985,7 @@ observeEvent(input$tab, {
                 radioGroupButtons(
                   inputId = "box6.3",
                   label = "Select group", 
-                  choiceNames = c("Antimicrobials", "Antimicrobial - Groups", "Year", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceNames = c("Antimicrobials", "Antimicrobial - Groups", "Year", "Specialty", "Subspecialty", "Origin"),
                   choiceValues = c("ab_group", "ab_type", "year", "specialty", "sub_specialty", "adm_route"), 
                   selected = "year", 
                   direction = "vertical"
@@ -1028,7 +1052,7 @@ observeEvent(input$tab, {
                 radioGroupButtons(
                   inputId = "box7.0",
                   label = "Select group", 
-                  choiceNames = c("All", "Antimicrobial - Groups", "Antimicrobials", "Year", "Gender", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceNames = c("All", "Antimicrobial - Groups", "Antimicrobials", "Year", "Gender", "Specialty", "Subspecialty", "Origin"),
                   choiceValues = c("fullname", "ab_group", "ab_type", "year", "gender", "specialty", "sub_specialty", "adm_route"), 
                   selected = "fullname", 
                   direction = "vertical"
@@ -1078,7 +1102,7 @@ observeEvent(input$tab, {
                 radioGroupButtons(
                   inputId = "box7.2",
                   label = "Select group", 
-                  choiceNames = c("All", "Year", "Gender", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceNames = c("All", "Year", "Gender", "Specialty", "Subspecialty", "Origin"),
                   choiceValues = c("fullname", "year", "gender", "specialty", "sub_specialty", "adm_route"), 
                   selected = "fullname", 
                   direction = "vertical"
@@ -1139,8 +1163,7 @@ observeEvent(input$tab, {
             inputId = "box8.1",
             label = "Select isolates",
             choices = sort(unique(microbiology$fullname)[!is.na(unique(microbiology$fullname))]),
-            multiple = TRUE, 
-            selected = "Escherichia coli"
+            multiple = TRUE
           ),
           size = "xs",
           label = "Isolates",
@@ -1170,8 +1193,7 @@ observeEvent(input$tab, {
                      "tige", "doxy", "eryt", "clin", "azit", "imip", "mero", "metr", "chlo",
                      "coli", "mupi"))),
               sep = ", "
-            ),
-            selected = c("amox", "cipr")
+            )
           ),
           size = "xs",
           label = "Antimicrobials",
@@ -1190,7 +1212,7 @@ observeEvent(input$tab, {
               radioGroupButtons(
                 inputId = "box8.0",
                 label = "Select group",
-                choiceNames = c("All", "Year", "Gender", "Specialty", "Subspecialty", "Admitting department"),
+                choiceNames = c("All", "Year", "Gender", "Specialty", "Subspecialty", "Origin"),
                 choiceValues = c("fullname", "year", "gender", "specialty", "sub_specialty", "adm_route"),
                 selected = "fullname",
                 direction = "vertical"
@@ -1265,7 +1287,7 @@ observeEvent(input$tab, {
               radioGroupButtons(
                 inputId = "box8.7",
                 label = "Select group", 
-                choiceNames = c("None", "Year", "Month", "Quarter", "Gender", "Specialty", "Subspecialty", "Admitting department"),
+                choiceNames = c("None", "Year", "Month", "Quarter", "Gender", "Specialty", "Subspecialty", "Origin"),
                 choiceValues = c("fullname", "year", "yearmonth_test", "yearquarter_test", "gender", "specialty", "sub_specialty", "adm_route"), 
                 selected = "fullname", 
                 direction = "vertical"
@@ -1367,7 +1389,7 @@ observeEvent(input$tab, {
                 radioGroupButtons(
                   inputId = "box_los1.0",
                   label = "Select group", 
-                  choiceNames = c("All", "Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceNames = c("All", "Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Subspecialty", "Origin"),
                   choiceValues = c("1", "gender", "year", "ab_group", "ab_type", "check", "specialty", "sub_specialty", "adm_route"), 
                   selected = , 
                   direction = "vertical",
@@ -1534,7 +1556,7 @@ observeEvent(input$tab, {
       if(input$box_los1.0 == "ab_group"){y <- "Antimicrobial - Groups"}
       if(input$box_los1.0 == "ab_type"){y <- "Antimicrobials"}
       if(input$box_los1.0 == "check"){y <- "Diagnostics"}
-      if(input$box_los1.0 == "adm_route"){y <- "Admitting department"}
+      if(input$box_los1.0 == "adm_route"){y <- "Origin"}
       y
     }
     
@@ -1559,7 +1581,7 @@ observeEvent(input$tab, {
                 radioGroupButtons(
                   inputId = "box_los3",
                   label = "Select group", 
-                  choiceNames = c("Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Subspecialty", "Admitting department"),
+                  choiceNames = c("Gender", "Year", "Antimicrobial - Groups", "Antimicrobials", "Diagnostics", "Specialty", "Subspecialty", "Origin"),
                   choiceValues = c("gender", "year", "ab_group", "ab_type", "check", "specialty", "sub_specialty", "adm_route"), 
                   selected = "gender", 
                   direction = "vertical"
@@ -1721,6 +1743,7 @@ observeEvent(input$tab, {
       plot <- qic(year, n,
                   data = years, 
                   agg.fun = "sum",
+                  decimals = 2,
                   xlab = "Year",
                   ylab = "Count",
                   title = "Admissions per year") +
@@ -1732,6 +1755,7 @@ observeEvent(input$tab, {
         plot <- qic(yearquarter_adm, n,
                     data = quarter,
                     agg.fun = "sum",
+                    decimals = 2,
                     xlab = "Quarter",
                     ylab = "Count",
                     title = "Admissions per quarter") +
@@ -1741,6 +1765,7 @@ observeEvent(input$tab, {
         plot <- qic(yearmonth_adm, n,
                     data = months,
                     agg.fun = "sum",
+                    decimals = 2,
                     xlab = "Month",
                     ylab = "Count",
                     title = "Admissions per month") +
@@ -1765,7 +1790,7 @@ observeEvent(input$tab, {
   plot_ab <- reactive({
     
     data <- set_reac_2() %>% 
-      group_by_("id", input$box1.0) %>% 
+      group_by_("id", "adm_id", input$box1.0) %>% 
       summarise(
         DDD_sum = sum(ddd_per_prescription, na.rm = TRUE),
         DOT_sum = sum(ab_days, na.rm = TRUE)
@@ -1773,7 +1798,7 @@ observeEvent(input$tab, {
       ungroup() %>% 
       left_join(
         set_reac_2() %>% 
-          select(id, LOS) %>% 
+          select(id, adm_id, LOS) %>% 
           distinct()
       ) %>% 
       mutate(DDD_per_day_100 = DDD_sum/LOS/100,
@@ -1838,7 +1863,7 @@ observeEvent(input$tab, {
   ddd_dot <- reactive({
     
     set_reac_2() %>% 
-      group_by(id, year, 
+      group_by(id, adm_id, year, 
                yearmonth_adm, yearquarter_adm, specialty, sub_specialty, adm_route) %>% 
       summarise(
         DDD_sum = sum(ddd_per_prescription, na.rm = TRUE),
@@ -1846,7 +1871,7 @@ observeEvent(input$tab, {
       ) %>% 
       ungroup() %>% 
       left_join(
-        set_reac_2() %>% select(id, LOS)
+        set_reac_2() %>% select(id, adm_id, LOS)
       ) %>% 
       distinct() %>% 
       mutate(DDD_per_day_100 = DDD_sum/LOS/100,
@@ -1861,6 +1886,7 @@ observeEvent(input$tab, {
     plot_year <- qic(x = year, y = DDD_per_day_100, 
                       data = ddd_dot(),
                       agg.fun = "sum",
+                      decimals = 2,
                       xlab = "Year",
                       ylab = "DDD per 100 bed days",
                       title = "Defined daily doses (DDD) / 100 bed days per year",
@@ -1884,6 +1910,7 @@ observeEvent(input$tab, {
     plot_month <- qic(x = yearmonth_adm, y = DDD_per_day_100,
                       data = ddd_dot(), 
                       agg.fun = "sum",
+                      decimals = 2,
                       xlab = "Months",
                       ylab = "DDD per 100 bed days",
                       title = "Defined daily doses (DDD) / 100 bed days per month",
@@ -1906,6 +1933,7 @@ observeEvent(input$tab, {
     plot_quarter <- qic(x = yearquarter_adm, y = DDD_per_day_100,
                         data = ddd_dot(),
                         agg.fun = "sum",
+                        decimals = 2,
                         xlab = "Quarter",
                         ylab = "DDD per 100 bed days",
                         title = "Defined daily doses (DDD) / 100 bed days per quarter",
@@ -1957,6 +1985,7 @@ observeEvent(input$tab, {
     plot_year <- qic(x = year, y = DOT_per_day_100,
                      data = ddd_dot(),
                      agg.fun = "sum",
+                     decimals = 2,
                      xlab = "Year",
                      ylab = "DOT per 100 bed days",
                      title = "Days of therapy (DOT) / 100 bed days per year",
@@ -1980,6 +2009,7 @@ observeEvent(input$tab, {
     plot_month <- qic(x = yearmonth_adm, y = DOT_per_day_100,
                       data = ddd_dot(),
                       agg.fun = "sum",
+                      decimals = 2,
                       xlab = "Months",
                       ylab = "DOT per 100 bed days",
                       title = "Days of therapie (DOT) / 100 bed days per month",
@@ -2002,6 +2032,7 @@ observeEvent(input$tab, {
     plot_quarter <- qic(x = yearquarter_adm, y = DOT_per_day_100,
                         data = ddd_dot(),
                         agg.fun = "sum",
+                        decimals = 2,
                         xlab = "Quarter",
                         ylab = "DOT per 100 bed days",
                         title = "Days of therapy (DOT) / 100 bed days per quarter",
@@ -2051,13 +2082,13 @@ observeEvent(input$tab, {
  output$table_ab <- DT::renderDataTable({
 
    table <- set_reac_2() %>% 
-     group_by_("id", input$box4.0) %>% 
+     group_by_("id", "adm_id", input$box4.0) %>% 
      summarise(
        DDD_sum = sum(ddd_per_prescription, na.rm = TRUE),
        DOT_sum = sum(ab_days, na.rm = TRUE)
      ) %>% 
      left_join(
-       set_reac_2() %>% select(id, LOS)
+       set_reac_2() %>% select(id, adm_id, LOS)
      ) %>% 
      distinct() %>% 
      ungroup() %>% 
@@ -2095,7 +2126,7 @@ observeEvent(input$tab, {
   dia_adm <- reactive({
     
     ts <- set_reac_1() %>% 
-      group_by(id) %>% 
+      group_by(id, adm_id) %>% 
       distinct(check, .keep_all = TRUE) %>% 
       ungroup() %>% 
       group_by_(input$box5.1, "check") %>% 
@@ -2231,7 +2262,7 @@ observeEvent(input$tab, {
         alpha = 0.8) +
       scale_fill_continuous(high = "#706f6f", low = "#cccccc")+
       labs(
-        y = paste0("Diff. from average [", perform_all[1, 2], "%]"), 
+        y = paste0("Absolute diff. from average [", perform_all[1, 2], "%]"), 
         x = "") +
       guides(fill = FALSE) +
       coord_flip() +
@@ -2364,7 +2395,7 @@ observeEvent(input$tab, {
       micro_table <- micro_table %>% rename("Subspecialty" = sub_specialty)
     }
     if (input$box7.2 == "adm_route") {
-      micro_table <- micro_table %>% rename("Admitting department" = adm_route)
+      micro_table <- micro_table %>% rename("Origin" = adm_route)
     } else {
       micro_table <- micro_table
     }
@@ -2524,6 +2555,7 @@ observeEvent(input$tab, {
       Value,
       data = ts, 
       agg.fun = "sum",
+      decimals = 2,
       facets = ~ Interpretation,
       ncol = 1
     ) + 
@@ -2854,7 +2886,7 @@ observeEvent(input$tab, {
       set_table <- set_table %>% rename("Subspecialty" = sub_specialty)
     }
     if (input$box_los3 == "adm_route") {
-      set_table <- set_table %>% rename("Admitting department" = adm_route)
+      set_table <- set_table %>% rename("Origin" = adm_route)
     }
 
     datatable(
@@ -2885,7 +2917,7 @@ observeEvent(input$tab, {
       write_csv(set_base(), file)
     }
   )
-  
+
   output$downloadMicroData <- downloadHandler(
     filename = function() {
       paste(input$filename, "_microbiology_", Sys.Date(), ".csv", sep = "")
