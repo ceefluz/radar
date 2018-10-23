@@ -296,7 +296,7 @@ ui <- dashboardPage(
         icon = icon("download"),
         textInput(
           inputId = "filename",
-          placeholder = "Not availalbe in demo mode",
+          placeholder = "Name download file",
           label = ""
         ),
         div(
