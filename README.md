@@ -13,17 +13,19 @@ RadaR was built in [R](https://www.r-project.org) , an open source programming l
 ## Input type for RadaR's calculation
 RadaR works with standard csv-files (.csv). The variables needed for RadaR are as follows:
 
+
 ### Input variables for **RadaR**
 #### Admission data
 | Variable             	| Detail                                                                           	|
 |----------------------	|----------------------------------------------------------------------------------	|
 | adm_end_date | End of admission (YYYY-MM-DD)   |
-| adm_route | Admitting department |
+| adm_route | Origin at admission |
 | adm_start_date | Start of admission (YYYY-MM-DD)  |
 | birth_date | Birth date (YYYY-MM-DD)  |
 | death_during_adm | Death during admission (TRUE/FALSE) |
 | gender | Gender |
 | id | Patient ID or study ID |
+| adm_id | Admission ID |
 | specialty | General specialty (internal medicine, surgery, other) |
 | sub_specialty | Sub-specialty |
 
@@ -34,7 +36,7 @@ RadaR works with standard csv-files (.csv). The variables needed for RadaR are a
 | ab_start_date| Start of antimicrobial treatment (YYYY-MM-DD) |
 | ab_stop_date| Stop of antimicrobial treatment (YYYY-MM-DD) |
 | atc_code| ATC code according WHO ATC classification system |
-| ddd_per_day| Defined daily dose of antimicrobial according to WHO ATC classification system |
+| ddd_per_prescription| Defined daily dose of antimicrobial according to WHO ATC classification system |
 | id| Patient ID or study ID  |
 
 #### Microbiological data
@@ -46,6 +48,7 @@ RadaR works with standard csv-files (.csv). The variables needed for RadaR are a
 | specialty | Ordering specialty |
 | test_date  | Test date (YYYY-MM-DD) |
 | antimicrobial susceptibility testing | Several columns of tested antimicrobial agents (e.g. amox, cipr etc.) with resistance results (R / I / S) |
+| mo | Microbial ID (if test is positive) following the nomenclature of the Integrated Taxonomic Information System
 
 These data will be loaded, merged, and transformed for analysis upon start of RadaR
 
