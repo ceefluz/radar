@@ -36,7 +36,7 @@ RadaR works with standard csv-files (.csv). The variables needed for RadaR are a
 | ab_start_date| Start of antimicrobial treatment (YYYY-MM-DD) |
 | ab_stop_date| Stop of antimicrobial treatment (YYYY-MM-DD) |
 | atc_code| ATC code according WHO ATC classification system |
-| ddd_per_prescription| Defined daily dose of antimicrobial according to WHO ATC classification system |
+| ddd_per_day| Defined daily dose of antimicrobial according to WHO ATC classification system per day|
 | id| Patient ID or study ID  |
 
 #### Microbiological data
