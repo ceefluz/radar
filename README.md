@@ -18,9 +18,9 @@ RadaR works with standard csv-files (.csv). The variables needed for RadaR are a
 #### Admission data
 | Variable             	| Detail                                                                           	|
 |----------------------	|----------------------------------------------------------------------------------	|
-| adm_end_date | End of admission (YYYY-MM-DD)   |
+| adm_end_date | Discharge date (YYYY-MM-DD)   |
 | adm_route | Origin at admission |
-| adm_start_date | Start of admission (YYYY-MM-DD)  |
+| adm_start_date | Admission date (YYYY-MM-DD)  |
 | birth_date | Birth date (YYYY-MM-DD)  |
 | death_during_adm | Death during admission (TRUE/FALSE) |
 | gender | Gender |
