@@ -7,12 +7,14 @@
 # INSTALL DEPENDENCIES ----------------------------------------------------
 
 source('dependencies.R')
+# load all packages
+lapply(required_packages, require, character.only = TRUE)
 
 # DATA TRANSFORMATION AND NEW VARIABLES -----------------------------------
 
-admissions <- read_csv("admissions.csv")
-antimicrobials <- read_csv("antimicrobials.csv")
-microbiology <- read_csv("microbiology.csv")
+admissions <- read_csv("data/admissions.csv")
+antimicrobials <- read_csv("data/antimicrobials.csv")
+microbiology <- read_csv("data/microbiology.csv")
 
 admissions <- admissions %>%
   mutate(year = year(adm_start_date),
