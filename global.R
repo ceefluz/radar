@@ -4,41 +4,9 @@
 
 #RadaR is licensed under the GNU General Public License (GPL) v2.0 (https://github.com/ceefluz/radar/blob/master/LICENSE)
 
-# LIST OF REQUIRED PACKAGES -----------------------------------------------
+# INSTALL DEPENDENCIES ----------------------------------------------------
 
-required_packages <- c(
-  "AMR",
-  "data.table",
-  "DT",
-  "ggridges",
-  "lubridate",
-  "plotly",
-  "qicharts2",
-  "rintrojs",
-  "shiny",
-  "shinyBS",
-  "shinycssloaders",
-  "shinydashboard",
-  "shinyjs",
-  "shinyWidgets",
-  "survival",
-  "survminer",
-  "tidyverse",
-  "viridis",
-  "zoo"
-)
-
-# install missing packages
-
-new.packages <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
-
-if (length(new.packages)) {
-  install.packages(new.packages)
-}
-
-# load all packages
-lapply(required_packages, require, character.only = TRUE)
-
+source('dependencies.R')
 
 # DATA TRANSFORMATION AND NEW VARIABLES -----------------------------------
 
