@@ -10,9 +10,9 @@ source('dependencies.R')
 
 # DATA TRANSFORMATION AND NEW VARIABLES -----------------------------------
 
-admissions <- read_csv("admissions_sample_181019.csv")
-antimicrobials <- read_csv("antimicrobials_sample_181019.csv")
-microbiology <- read_csv("microbiology_sample_181019.csv")
+admissions <- read_csv("admissions.csv")
+antimicrobials <- read_csv("antimicrobials.csv")
+microbiology <- read_csv("microbiology.csv")
 
 admissions <- admissions %>%
   mutate(year = year(adm_start_date),
