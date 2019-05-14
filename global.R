@@ -4,47 +4,17 @@
 
 #RadaR is licensed under the GNU General Public License (GPL) v2.0 (https://github.com/ceefluz/radar/blob/master/LICENSE)
 
-# LIST OF REQUIRED PACKAGES -----------------------------------------------
+# INSTALL DEPENDENCIES ----------------------------------------------------
 
-required_packages <- c(
-  "AMR",
-  "data.table",
-  "DT",
-  "ggridges",
-  "lubridate",
-  "plotly",
-  "qicharts2",
-  "rintrojs",
-  "shiny",
-  "shinyBS",
-  "shinycssloaders",
-  "shinydashboard",
-  "shinyjs",
-  "shinyWidgets",
-  "survival",
-  "survminer",
-  "tidyverse",
-  "viridis",
-  "zoo"
-)
-
-# install missing packages
-
-new.packages <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
-
-if (length(new.packages)) {
-  install.packages(new.packages)
-}
-
+source('dependencies.R')
 # load all packages
 lapply(required_packages, require, character.only = TRUE)
 
-
 # DATA TRANSFORMATION AND NEW VARIABLES -----------------------------------
 
-admissions <- read_csv("admissions_sample_181019.csv")
-antimicrobials <- read_csv("antimicrobials_sample_181019.csv")
-microbiology <- read_csv("microbiology_sample_181019.csv")
+admissions <- read_csv("data/admissions.csv")
+antimicrobials <- read_csv("data/antimicrobials.csv")
+microbiology <- read_csv("data/microbiology.csv")
 
 admissions <- admissions %>%
   mutate(year = year(adm_start_date),
