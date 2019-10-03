@@ -18,37 +18,37 @@ RadaR works with standard csv-files (.csv). The variables needed for RadaR are a
 #### Admission data
 | Variable             	| Detail                                                                           	|
 |----------------------	|----------------------------------------------------------------------------------	|
-| adm_end_date | Discharge date (YYYY-MM-DD)   |
-| adm_route | Origin at admission |
-| adm_start_date | Admission date (YYYY-MM-DD)  |
-| birth_date | Birth date (YYYY-MM-DD)  |
-| death_during_adm | Death during admission (TRUE/FALSE) |
-| gender | Gender |
 | id | Patient ID or study ID |
 | adm_id | Admission ID |
-| specialty | General specialty (internal medicine, surgery, other) |
+| gender | Gender |
+| adm_start_date | Admission date (YYYY-MM-DD)  |
+| adm_end_date | Discharge date (YYYY-MM-DD)   |
+| death_during_adm | Death during admission (TRUE/FALSE) |
+| adm_route | Origin at admission |
 | sub_specialty | Sub-specialty |
+| specialty | General specialty (internal medicine, surgery, other) |
+| birth_date | Birth date (YYYY-MM-DD)  |
 
 #### Antimicrobial consumption data
 | Variable             	| Detail                                                                           	|
 |----------------------	|----------------------------------------------------------------------------------	|
-| ab_route | Administration route (e.g. IV, oral, ...) |
+| id| Patient ID or study ID  |
 | ab_start_date| Start of antimicrobial treatment (YYYY-MM-DD) |
 | ab_stop_date| Stop of antimicrobial treatment (YYYY-MM-DD) |
+| ab_route | Administration route (e.g. IV, oral, ...) |
 | atc_code| ATC code according WHO ATC classification system |
 | ddd_per_day| Defined daily dose of antimicrobial according to WHO ATC classification system per day|
-| id| Patient ID or study ID  |
 
 #### Microbiological data
 | Variable             	| Detail                                                                           	|
 |----------------------	|----------------------------------------------------------------------------------	|
-| test_number | Test number |
 | id | Patient ID or study ID |
-| material | Test material (currently supported: blood and urine) |
 | specialty | Ordering specialty |
-| test_date  | Test date (YYYY-MM-DD) |
 | antimicrobial susceptibility testing | Several columns of tested antimicrobial agents (e.g. amox, cipr etc.) with resistance results (R / I / S) |
 | mo | Microbial ID (if test is positive) following the nomenclature of the Integrated Taxonomic Information System
+| material | Test material (currently supported: blood and urine) |
+| test_date  | Test date (YYYY-MM-DD) |
+| test_number | Test number |
 
 These data will be loaded, merged, and transformed for analysis upon start of RadaR
 
