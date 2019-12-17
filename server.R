@@ -1186,7 +1186,7 @@ server <- function(input, output, session) {
                      "tige", "doxy", "eryt", "clin", "azit", "imip", "mero", "metr", "chlo",
                      "coli", "mupi")),
             choiceNames = paste(
-              abname(
+              ab_name(
                 sort(c("peni", "oxac", "clox", "amox", "amcl", "ampi", "pita", "czol", "cfep",
                        "cfur", "cfox", "cfot", "cfta", "cftr", "gent", "tobr", "amik", "trim",
                        "trsu", "nitr", "fosf", "line", "cipr", "moxi", "vanc", "teic", "tetr",
@@ -2481,7 +2481,7 @@ server <- function(input, output, session) {
             } else {
               "\nCo-resistance to: "
             },
-            paste(abname(c(input$box8.2)), collapse = " & ")
+            paste(ab_name(c(input$box8.2)), collapse = " & ")
           )
       ) +
       theme_minimal() +
@@ -2574,7 +2574,7 @@ server <- function(input, output, session) {
                  } else {
                    "Co-resistance to "
                  },
-                 paste(abname(c(input$box8.2)), collapse = " & "), " - Count per month"
+                 paste(ab_name(c(input$box8.2)), collapse = " & "), " - Count per month"
           ))
     } else {
       if (input$box8.3 == "yearquarter_test") {
@@ -2587,7 +2587,7 @@ server <- function(input, output, session) {
                    } else {
                      "Co-resistance to "
                    },
-                   paste(abname(c(input$box8.2)), collapse = " & "), " - Count per quarter"
+                   paste(ab_name(c(input$box8.2)), collapse = " & "), " - Count per quarter"
             ))
         
       } else {
@@ -2600,7 +2600,7 @@ server <- function(input, output, session) {
                    } else {
                      "Co-resistance to "
                    },
-                   paste(abname(c(input$box8.2)), collapse = " & "), " - Count per year"
+                   paste(ab_name(c(input$box8.2)), collapse = " & "), " - Count per year"
             ))
       }
     }
@@ -2644,7 +2644,7 @@ server <- function(input, output, session) {
                              portion_R(., as_percent = TRUE)
                            }),
                Interpretation = "R", 
-               Antimicrobial = paste0(abname(c(input$box8.2)), collapse = " & ")) %>% 
+               Antimicrobial = paste0(ab_name(c(input$box8.2)), collapse = " & ")) %>% 
         select(-data) %>% 
         unnest()
     }
