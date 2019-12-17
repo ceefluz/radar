@@ -34,24 +34,7 @@ microbiology <- microbiology %>%
          yearquarter_test = as.yearqtr(test_date))
 
 microbiology <- microbiology %>%
-  group_by(material) %>%
-  nest() %>%
-  mutate(data =
-           map(
-             data,
-             ~ mutate(
-               .x,
-               first_isolate =
-                 AMR::first_isolate(
-                   tbl = .,
-                   col_date = "test_date",
-                   col_patient_id = "id",
-                   col_mo = "mo"
-                 )
-             )
-           )
-  ) %>%
-  unnest()
+  mutate(first_isolate = first_isolate(., col_mo = "mo", col_date = "test_date",col_patient_id = "id", col_specimen = "material"))
 
 
 # Join datasets by overlaping time intervals
@@ -109,7 +92,7 @@ antimicrobials <- antimicrobials %>%
   left_join(
     AMR::antibiotics %>%
       select(
-        atc_code = atc, ab_type = official, ab_group = atc_group2
+        atc_code = atc, ab_type = name, ab_group = atc_group2
       ), by = "atc_code") %>%
   group_by(id, adm_id) %>%
   mutate(ddd_total = sum(ddd_per_prescription, na.rm = TRUE),
