@@ -23,6 +23,11 @@ admissions <- admissions %>%
          LOS = as.integer(adm_end_date - adm_start_date + 1),
          age = as.integer(year(adm_start_date) - year(birth_date)))
 
+# antimicrobials 
+
+antimicrobials <- antimicrobials %>% 
+  mutate_at(vars(contains("date")), as.Date)
+
 
 # microbiology
 
@@ -53,7 +58,7 @@ anti <- anti[
 micro <- micro[
   pat,
   on = .(id, test_date >= adm_start_date, test_date <= adm_end_date),
-  .(id, adm_id, test_date = x.test_date, test_number, adm_start_date, adm_end_date),
+  .(id, adm_id, test_date = x.test_date, test_number, adm_start_date, adm_end_date, material),
   nomatch = 0L
   ]
 
@@ -61,17 +66,29 @@ anti_first <- anti %>%
   group_by(id, adm_id) %>%
   summarise(min_ab_start = min(ab_start_date)) # first prescription date
 
-timing <- micro %>%
+bc_timing <- micro %>%
   left_join(anti_first) %>%
-  mutate(test_timing = as.integer(test_date - min_ab_start)) %>%
+  filter(material == "blood") %>% 
+  mutate(bc_timing = as.integer(test_date - min_ab_start)) %>%
   group_by(id, adm_id) %>%
-  filter(test_timing == min(test_timing, na.rm = FALSE)) %>%
+  filter(bc_timing == min(bc_timing, na.rm = FALSE)) %>%
   ungroup() %>%
-  select(id, adm_id, test_timing) %>%
+  select(id, adm_id, bc_timing) %>%
+  distinct()
+
+uc_timing <- micro %>%
+  left_join(anti_first) %>%
+  filter(material == "urine") %>% 
+  mutate(uc_timing = as.integer(test_date - min_ab_start)) %>%
+  group_by(id, adm_id) %>%
+  filter(uc_timing == min(uc_timing, na.rm = FALSE)) %>%
+  ungroup() %>%
+  select(id, adm_id, uc_timing) %>%
   distinct()
 
 admissions <- admissions %>%
-  left_join(timing)
+  left_join(bc_timing) %>% 
+  left_join(uc_timing)
 
 microbiology <- microbiology %>%
   semi_join(micro)
