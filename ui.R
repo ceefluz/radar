@@ -81,14 +81,14 @@ ui <- dashboardPage(
                      inputId = "ab_timingInput",
                      label = "",
                      min = 0,
-                     max = 10,
-                     value = c(0, 1),
+                     max = max(antimicrobials$ab_timing, na.rm = TRUE),
+                     value = c(0, max(antimicrobials$ab_timing, na.rm = TRUE)),
                      step = 1
                    ),
                    switchInput(
                      inputId = "ab_anyInput",
                      label = "SELECTION",
-                     value = TRUE, 
+                     value = FALSE, 
                      onLabel = "SLIDER", 
                      offLabel = "ANY", 
                      inline = TRUE, 
@@ -110,7 +110,7 @@ ui <- dashboardPage(
                    switchInput(
                      inputId = "ab_any_allInput",
                      label = "SELECTION",
-                     value = TRUE, 
+                     value = FALSE, 
                      onLabel = "SLIDER", 
                      offLabel = "ANY", 
                      inline = TRUE, 
@@ -132,7 +132,7 @@ ui <- dashboardPage(
                    switchInput(
                      inputId = "ab_any_singleInput",
                      label = "SELECTION",
-                     value = TRUE, 
+                     value = FALSE, 
                      onLabel = "SLIDER", 
                      offLabel = "ANY", 
                      inline = TRUE, 
@@ -155,7 +155,7 @@ ui <- dashboardPage(
                    switchInput(
                      inputId = "firstInput",
                      label = "",
-                     value = TRUE, 
+                     value = FALSE, 
                      onLabel = "FIRST", 
                      offLabel = "ALL", 
                      size = "mini", 
@@ -231,8 +231,8 @@ ui <- dashboardPage(
                  checkboxGroupInput(
                    inputId = "specInput",
                    label = "SPECIALTY",
-                   choices = c("Internal medicine", "Surgery", "Other"),
-                   selected = c("Internal medicine", "Surgery", "Other")
+                   choices = unique(admissions$specialty),
+                   selected = unique(admissions$specialty)
                  ),
                  sliderTextInput(
                    inputId = "nInput",
@@ -282,8 +282,8 @@ ui <- dashboardPage(
                    inputId = "checkInput",
                    label = "DAYS TO FIRST TEST (IN RELATION TO START OF ANTIMICROBIALS)",
                    value = c(-1L, 1L),
-                   min = -5L,
-                   max = 10L,
+                   min = min(c(admissions$bc_timing, admissions$uc_timing), na.rm = TRUE),
+                   max = max(c(admissions$bc_timing, admissions$uc_timing), na.rm = TRUE),
                    step = 1L
                  )
                ),

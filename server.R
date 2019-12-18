@@ -6,23 +6,23 @@ server <- function(input, output, session) {
   
   # define whether diagnostics have been performed in selected interval
   set_select <- reactive({
-    
-    if (input$diagnosticsInput == "bc_timing") {
-      antimicrobials %>%
-        mutate(check =
-                 if_else(test_timing %in% c(
-                   min(input$checkInput):max(input$checkInput)
-                 ),
-                 "Taken", "Not taken"))
-    }
-    else {
-      antimicrobials %>%
-        mutate(check =
-                 if_else(uc_timing %in% c(
-                   min(input$checkInput):max(input$checkInput)
-                 ),
-                 "Taken", "Not taken")) 
-    }
+    input$confirm # confirm buttons needs to be pressed to initiate this code
+    isolate({
+      if (input$diagnosticsInput == "bc_timing") {
+        antimicrobials %>%
+          mutate(check =
+                   if_else(bc_timing %in% c(min(input$checkInput):max(input$checkInput)),
+                           "Taken", 
+                           "Not taken"))
+      }
+      else {
+        antimicrobials %>%
+          mutate(check =
+                   if_else(uc_timing %in% c(min(input$checkInput):max(input$checkInput)),
+                           "Taken", 
+                           "Not taken")) 
+      }
+    })
   })
   
   # base set with sidebar input: adminstration route, first prescription, antimicrobials, max use all, max use single
@@ -79,7 +79,10 @@ server <- function(input, output, session) {
   test_results <- reactive({
     input$confirm
     isolate({
-      microbiology %>% semi_join(set_base(), by = c("id", "adm_id"))
+      microbiology %>% 
+        semi_join(set_base(), by = c("id", "adm_id")) %>%
+        left_join(set_base() %>% select(id, adm_id, check)) %>% 
+        filter(check == "Taken")
     })
   })
   
@@ -222,7 +225,7 @@ server <- function(input, output, session) {
                         label = NULL,
                         value = c(0, 1),
                         min = 0,
-                        max = 10,
+                        max = max(antimicrobials$ab_timing, na.rm = TRUE),
                         step = 1
       )
     }
@@ -1180,18 +1183,10 @@ server <- function(input, output, session) {
             size = "xs", checkIcon = list("yes" = icon("check")),
             individual = TRUE,
             choiceValues = 
-              sort(c("peni", "oxac", "clox", "amox", "amcl", "ampi", "pita", "czol", "cfep",
-                     "cfur", "cfox", "cfot", "cfta", "cftr", "gent", "tobr", "amik", "trim",
-                     "trsu", "nitr", "fosf", "line", "cipr", "moxi", "vanc", "teic", "tetr",
-                     "tige", "doxy", "eryt", "clin", "azit", "imip", "mero", "metr", "chlo",
-                     "coli", "mupi")),
+              sort(colnames(microbiology %>% select_if(is.rsi))),
             choiceNames = paste(
               ab_name(
-                sort(c("peni", "oxac", "clox", "amox", "amcl", "ampi", "pita", "czol", "cfep",
-                       "cfur", "cfox", "cfot", "cfta", "cftr", "gent", "tobr", "amik", "trim",
-                       "trsu", "nitr", "fosf", "line", "cipr", "moxi", "vanc", "teic", "tetr",
-                       "tige", "doxy", "eryt", "clin", "azit", "imip", "mero", "metr", "chlo",
-                       "coli", "mupi"))),
+                sort(colnames(microbiology %>% select_if(is.rsi)))),
               sep = ", "
             )
           ),
@@ -2124,69 +2119,71 @@ server <- function(input, output, session) {
   # BOX DIAGNOSTICS - 1  ------------------------------------------------------------------
   
   dia_adm <- reactive({
-    
-    ts <- set_reac_1() %>% 
-      group_by(id, adm_id) %>% 
-      distinct(check, .keep_all = TRUE) %>% 
-      ungroup() %>% 
-      group_by_(input$box5.1, "check") %>% 
-      summarise(n = n())
-    
-    plot <-
-      ggplot(ts, aes_string(input$box5.1, "n", fill = "check")) +
-      theme_minimal() +
-      theme(plot.title = element_text(face = "bold", size = 12)) +
-      ggtitle(
-        paste0("Diagnostic performed within ",
-               min(input$checkInput),
-               " and ",
-               max(input$checkInput),
-               " days \nfrom start of antimicrobials")) +
-      labs(x = if (input$box5.1 == "year") {
-        paste("Per year")
-      } else {
-        if (input$box5.1 == "yearquarter_adm") {
-          paste("Per quarter")
+    input$confirm # confirm buttons needs to be pressed to initiate this code
+    isolate({
+      ts <- set_reac_1() %>% 
+        group_by(id, adm_id) %>% 
+        distinct(check, .keep_all = TRUE) %>% 
+        ungroup() %>% 
+        group_by_(input$box5.1, "check") %>% 
+        summarise(n = n())
+      
+      plot <-
+        ggplot(ts, aes_string(input$box5.1, "n", fill = "check")) +
+        theme_minimal() +
+        theme(plot.title = element_text(face = "bold", size = 12)) +
+        ggtitle(
+          paste0("Diagnostic performed within ",
+                 min(input$checkInput),
+                 " and ",
+                 max(input$checkInput),
+                 " days \nfrom start of antimicrobials")) +
+        labs(x = if (input$box5.1 == "year") {
+          paste("Per year")
         } else {
-          paste("Per month")
+          if (input$box5.1 == "yearquarter_adm") {
+            paste("Per quarter")
+          } else {
+            paste("Per month")
+          }
+        }, y = if (input$box5.2 == "dodge") {
+          paste("Count")
+        } else {
+          paste("Proportion")
+        }) +
+        if (input$box5.1 == "yearquarter_adm") { 
+          scale_x_yearqtr(n = 12)
+        } else {
+          if (input$box5.1 == "yearmonth_adm") {
+            scale_x_yearmon(n = 12)
+          }
         }
-      }, y = if (input$box5.2 == "dodge") {
-        paste("Count")
-      } else {
-        paste("Proportion")
-      }) +
-      if (input$box5.1 == "yearquarter_adm") { 
-        scale_x_yearqtr(n = 12)
-      } else {
-        if (input$box5.1 == "yearmonth_adm") {
-          scale_x_yearmon(n = 12)
+      
+      plot <- plot + 
+        if (input$diagnosticsInput == "bc_timing") {
+          scale_fill_manual(
+            values = c("#a6a6a6", "#d1351b"),
+            name = "Blood cultures"
+          )
         }
-      }
-    
-    plot <- plot + 
-      if (input$diagnosticsInput == "bc_timing") {
+      else {
         scale_fill_manual(
-          values = c("#a6a6a6", "#d1351b"),
-          name = "Blood cultures"
+          values = c("#a6a6a6", "#f39c12"),
+          name = "Urine cultures"
         )
       }
-    else {
-      scale_fill_manual(
-        values = c("#a6a6a6", "#f39c12"),
-        name = "Urine cultures"
-      )
-    }
-    
-    plot + 
-      if(input$box5.1 == "year") {
-        geom_col(position = input$box5.2,
-                 color = "black",
-                 alpha = 0.8)
-      } else {
-        geom_area(position = input$box5.2,
-                  color = "black",
-                  alpha = 0.8)
-      }
+      
+      plot + 
+        if(input$box5.1 == "year") {
+          geom_col(position = input$box5.2,
+                   color = "black",
+                   alpha = 0.8)
+        } else {
+          geom_area(position = input$box5.2,
+                    color = "black",
+                    alpha = 0.8)
+        }
+    })
   })
   
   output$plot_dia_adm <- renderPlot({
@@ -2196,33 +2193,29 @@ server <- function(input, output, session) {
   # timing plot
   
   plot_dia_timing <- reactive({
-    
-    test_timing <- set_reac_1() %>%
-      group_by(test_timing, check) %>%
-      summarise(n = n())
-    
-    ggplot(test_timing, aes(x = test_timing, y = n, fill = check)) +
-      geom_bar(
-        stat = "identity",
-        position = "stack",
-        color = "black", 
-        alpha = 0.8) +
-      scale_fill_manual(
-        breaks = c("Not taken", "Taken"), 
-        values = 
-          if (input$diagnosticsInput == "bc_timing") {
-            c("#a6a6a6", "#d1351b")
-          } else {
-            c("#a6a6a6", "#f39c12")
-          },
-        labels = c("Not selected", "Selected"),
-        name = "") + 
-      scale_x_continuous(breaks = c(0:10)) +
-      coord_cartesian(xlim = c(-1:10)) +
-      labs(x = "Days", y = "Count") +
-      theme_minimal() +
-      theme(plot.title = element_text(face = "bold", size = 12)) +
-      ggtitle("Timing in relation to start of antimicrobials")
+    input$confirm # confirm buttons needs to be pressed to initiate this code
+    isolate({
+      test_timing <- set_reac_1() %>%
+        count(uc_timing, check) 
+      
+      ggplot(test_timing, aes(x = uc_timing, fill = check)) +
+        geom_bar(color = "black", 
+                 alpha = 0.8) +
+        scale_fill_manual(
+          breaks = c("Not taken", "Taken"),
+          values =
+            if (input$diagnosticsInput == "bc_timing") {
+              c("#a6a6a6", "#d1351b")
+            } else {
+              c("#a6a6a6", "#f39c12")
+            },
+          labels = c("Not selected", "Selected"),
+          name = " ") +
+        labs(x = "Days", y = "Count") +
+        theme_minimal() +
+        theme(plot.title = element_text(face = "bold", size = 12)) +
+        ggtitle("Timing in relation to start of antimicrobials")
+    })
   })
   
   output$plot_dia_timing <- renderPlot({
@@ -2234,6 +2227,8 @@ server <- function(input, output, session) {
   # BOX DIAGNOSTICS - 2 --------------------------------------------------------
   
   plot_dia_perform <- reactive({
+    input$confirm # confirm buttons needs to be pressed to initiate this code
+    isolate({
     perform_all <- set_reac_1() %>%
       mutate(dia_perform_all = round(sum(check == "Taken") / n() * 100, 1)) %>%
       dplyr::select(input$box6.1, dia_perform_all)
@@ -2263,7 +2258,7 @@ server <- function(input, output, session) {
       scale_fill_continuous(high = "#706f6f", low = "#cccccc")+
       labs(
         y = paste0("Absolute diff. from average [", perform_all[1, 2], "%]"), 
-        x = "") +
+        x = " ") +
       guides(fill = FALSE) +
       coord_flip() +
       theme_minimal() +
@@ -2274,6 +2269,7 @@ server <- function(input, output, session) {
                " and ",
                max(input$checkInput),
                " days \nfrom start of antimicrobials - comparison"))
+  })
   })
   
   output$plot_dia_perform <- renderPlot({
@@ -2436,24 +2432,19 @@ server <- function(input, output, session) {
     
     ts <- isolate_data() %>% 
       dplyr::select(input$box8.0, input$box8.2) %>% 
-      group_by_(input$box8.0) %>% 
-      nest()
-    
+      group_by_(input$box8.0)
+  
     if (length(input$box8.2) == 1) {
-      ts <- ts %>% mutate(Value = map(data, ~ count_df(.))) %>% 
-        select(-data) %>% 
-        unnest()
+      ts <- ts %>% count_df(combine_SI = FALSE)
     } else {
       ts <- ts %>% 
-        mutate(Value = map(data, ~ count_R(.)),
-               Interpretation = "R") %>% 
-        select(-data) %>% 
-        unnest()
+        mutate(value = count_R(.),
+               interpretation = "R")
     }
     
     plot <- 
       ggplot(ts,
-             aes_string(input$box8.0, "Value", fill = "Interpretation")) +
+             aes_string(input$box8.0, "value", fill = "interpretation")) +
       geom_bar(
         stat = "identity",
         position = 
@@ -2527,20 +2518,15 @@ server <- function(input, output, session) {
     
     ts <- isolate_data() %>% 
       select(col_select) %>% 
-      group_by_(input$box8.3) %>%
-      nest()
+      group_by_(input$box8.3) 
     
     if (length(input$box8.2) == 1) {
-      ts <- ts %>% mutate(Value = map(data, ~ count_df(.))) 
+      ts <- ts %>% count_df(combine_SI = FALSE)
     } else {
       ts <- ts %>% 
-        mutate(Value = map(data, ~ count_R(.)),
-               Interpretation = "R") 
+        mutate(value = count_R(.),
+               interpretation = "R") 
     }
-    
-    ts <- ts %>% 
-      select(-data) %>% 
-      unnest()
     
     plot <- qic(
       if (input$box8.3 == "year") {
@@ -2552,11 +2538,11 @@ server <- function(input, output, session) {
           yearmonth_test
         }
       },
-      Value,
+      value,
       data = ts, 
       agg.fun = "sum",
       decimals = 2,
-      facets = ~ Interpretation,
+      facets = ~ interpretation,
       ncol = 1
     ) + 
       labs(caption = "(Line represents median; if red-dotted = signal for non-random variation)") +
